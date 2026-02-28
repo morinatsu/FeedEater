@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import type { Feed, RSSItem } from "../types";
@@ -30,7 +31,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       const data = await window.api.getFeeds();
       setFeeds(data);
-    } catch (err) {
+    } catch {
       setError("Failed to load feeds");
     }
   };
@@ -40,7 +41,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       const data = await window.api.getItems(feedId);
       setItems(data);
-    } catch (err) {
+    } catch {
       setError("Failed to load items");
     } finally {
       setIsLoading(false);

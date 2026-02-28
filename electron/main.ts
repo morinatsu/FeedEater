@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell } from 'electron'
 import * as path from 'path'
 import { fileURLToPath } from 'node:url'
 import { initDB, closeDB } from './db/index'
+import { autoUpdater } from 'electron-updater'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // ...
@@ -98,4 +99,21 @@ ipcMain.on('open-external', (_event, url: string) => {
 app.whenReady().then(() => {
   initDB()
   createWindow()
+
+  // Configure automatic updates
+  autoUpdater.logger = console // Using console if electron-log is not installed
+  autoUpdater.checkForUpdatesAndNotify()
+
+  autoUpdater.on('update-available', () => {
+    console.log('Update available.')
+    win?.webContents.send('main-process-message', 'Update available. Downloading...')
+  })
+
+  autoUpdater.on('update-downloaded', () => {
+    console.log('Update downloaded. Restarting...')
+    win?.webContents.send('main-process-message', 'Update downloaded. Restarting to install...')
+    setTimeout(() => {
+      autoUpdater.quitAndInstall()
+    }, 3000)
+  })
 })

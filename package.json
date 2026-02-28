@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "better-sqlite3": "^12.6.2",
+    "electron-log": "^5.4.3",
+    "electron-updater": "^6.8.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "rss-parser": "^3.13.0"
@@ -34,5 +36,28 @@
     "vite": "^7.3.1",
     "vite-plugin-electron": "^0.29.0",
     "vite-plugin-electron-renderer": "^0.14.6"
+  },
+  "build": {
+    "appId": "com.feedeater.app",
+    "productName": "FeedEater",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "morinatsu",
+      "repo": "FeedEater"
+    }
   }
 }

@@ -28,7 +28,7 @@ export const ReadingPane = () => {
     if (anchor) {
       e.preventDefault();
 
-      let targetUrl = anchor.getAttribute("href");
+      const targetUrl = anchor.getAttribute("href");
       if (!targetUrl) return;
 
       // Handle relative URLs (like /article/123) by resolving them against the original item link
