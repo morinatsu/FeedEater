@@ -1,4 +1,5 @@
 import Parser from 'rss-parser';
+import iconv from 'iconv-lite';
 import { addFeed, insertItem } from '../db/repository';
 
 const parser = new Parser({
@@ -10,12 +11,47 @@ const parser = new Parser({
     }
 });
 
+async function fetchAndParseFeed(url: string) {
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Try to determine encoding from headers
+    const contentType = response.headers.get('content-type') || '';
+    let charset = 'utf-8';
+    const match = contentType.match(/charset=([^;]+)/i);
+    if (match) {
+        charset = match[1].toLowerCase();
+    } else {
+        // Fallback: peek at the first 500 bytes to find the XML encoding declaration
+        const head = buffer.toString('ascii', 0, Math.min(buffer.length, 500));
+        const xmlMatch = head.match(/<\?xml[^>]+encoding=["']([^"']+)["']/i);
+        if (xmlMatch) {
+            charset = xmlMatch[1].toLowerCase();
+        }
+    }
+
+    let xmlString = buffer.toString('utf-8'); // Default fallback
+    if (iconv.encodingExists(charset)) {
+        xmlString = iconv.decode(buffer, charset);
+    }
+
+    // Fix unescaped ampersands which frequently break XML validation in RSS/RDF feeds
+    const cleanedContent = xmlString.replace(/&(?!#?[a-z0-9]+;)/gi, '&amp;');
+
+    return parser.parseString(cleanedContent);
+}
+
 /**
  * Validates a URL, fetches the feed, adds it to the DB if successful, and returns the basic feed info.
  */
 export const registerFeed = async (url: string) => {
     try {
-        const feed = await parser.parseURL(url);
+        const feed = await fetchAndParseFeed(url);
         // Add to database
         const title = feed.title || 'Untitled Feed';
         const newFeed = addFeed(title, url);
@@ -35,7 +71,7 @@ export const registerFeed = async (url: string) => {
  */
 export const syncFeed = async (feedId: number, url: string) => {
     try {
-        const feed = await parser.parseURL(url);
+        const feed = await fetchAndParseFeed(url);
         let importedCount = 0;
 
         for (const item of feed.items) {

@@ -1,0 +1,33 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*' # v1.0.0、v2.1.3 のようなタグがプッシュされた際のみ実行される
+
+jobs:
+  release:
+    runs-on: windows-latest # Windows用のexeをビルドするため
+
+    permissions:
+      contents: write # GitHub Releases にアップロードするための権限（必須）
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20 # 安定板のNodeバージョンを指定
+          cache: 'npm'     # npmのキャッシュを有効にし、次回の処理を高速化
+
+      - name: Install Dependencies
+        run: npm ci # package-lock.jsonに厳密に従ってパッケージをクリーンインストール
+
+      - name: Build and Release
+        # electron-builderは、GitHub Actions環境でタグ実行であることを検知すると
+        # デフォルトで自動的にGitHub Releasesへアップロードしてくれます
+        run: npm run build
+        env:
+          # GitHub Actionsが自動生成するトークンを認証に使用します
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
