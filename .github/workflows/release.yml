@@ -25,9 +25,8 @@ jobs:
         run: npm ci # package-lock.jsonに厳密に従ってパッケージをクリーンインストール
 
       - name: Build and Release
-        # electron-builderは、GitHub Actions環境でタグ実行であることを検知すると
-        # デフォルトで自動的にGitHub Releasesへアップロードしてくれます
-        run: npm run build
+        # electron-builder requires the --publish always flag to upload assets to GitHub Releases
+        run: npm run release
         env:
           # GitHub Actionsが自動生成するトークンを認証に使用します
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
