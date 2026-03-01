@@ -14,30 +14,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: '.nvmrc'
-          cache: 'pnpm'
-
-      - name: Clear pnpm cache
-        run: pnpm store prune
+          node-version: 20
+          cache: 'npm'
 
       - name: Install dependencies
-        run: pnpm install
+        run: npm ci
 
       - name: Check Licenses
-        run: pnpm licenses ls
+        run: npx license-checker-rseidelsohn --summary
 
       - name: Check for Updates
         if: success() || failure()
-        run: pnpm outdated
+        run: npm outdated
 
       - name: Security Audit
         if: success() || failure()
-        run: pnpm audit
+        run: npm audit
