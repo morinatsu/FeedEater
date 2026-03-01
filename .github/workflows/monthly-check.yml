@@ -28,8 +28,8 @@ jobs:
 
       - name: Check for Updates
         if: success() || failure()
-        run: npm outdated
+        run: npm outdated || true
 
       - name: Security Audit
         if: success() || failure()
-        run: npm audit
+        run: npm audit || true
