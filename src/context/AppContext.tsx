@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
 import type { Feed, RSSItem } from "../types";
 
@@ -8,10 +8,12 @@ interface AppContextType {
   items: RSSItem[];
   selectedFeedId: number | null;
   selectedItemId: string | null;
+  sortOrder: "desc" | "asc";
   isLoading: boolean;
   error: string | null;
   setSelectedFeedId: (id: number | null) => void;
   setSelectedItemId: (id: string | null) => void;
+  setSortOrder: (order: "desc" | "asc") => void;
   addFeed: (url: string) => Promise<void>;
   markItemAsRead: (id: string) => Promise<void>;
   refreshFeeds: () => Promise<void>;
@@ -24,6 +26,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<RSSItem[]>([]);
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,17 +95,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const sortedItems = useMemo(() => {
+    return [...items].sort((a, b) => {
+      const dateA = new Date(a.pub_date).getTime();
+      const dateB = new Date(b.pub_date).getTime();
+      return sortOrder === "desc" ? dateB - dateA : dateA - dateB;
+    });
+  }, [items, sortOrder]);
+
   return (
     <AppContext.Provider
       value={{
         feeds,
-        items,
+        items: sortedItems,
         selectedFeedId,
         selectedItemId,
+        sortOrder,
         isLoading,
         error,
         setSelectedFeedId,
         setSelectedItemId,
+        setSortOrder,
         addFeed,
         markItemAsRead,
         refreshFeeds: loadFeeds,

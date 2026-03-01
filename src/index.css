@@ -108,17 +108,39 @@ body {
 }
 
 /* === Item List === */
-.item-list {
+.item-list-container {
   width: 350px;
   background-color: var(--item-list-bg);
   border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+}
+
+.item-list-header {
+  padding: 10px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-color);
+}
+
+.sort-select {
+  width: 100%;
+  padding: 6px;
+  background-color: var(--item-list-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  outline: none;
+}
+
+.item-list {
+  flex: 1;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
 
-.item-list.empty,
-.item-list.loading {
+.item-list-container.empty,
+.item-list-container.loading {
   justify-content: center;
   align-items: center;
   color: var(--text-secondary);
