@@ -101,3 +101,30 @@ export const syncFeed = async (feedId: number, url: string) => {
         return { success: false, error: String(error) };
     }
 };
+
+/**
+ * Fetches the latest items for all registered feeds.
+ */
+export const syncAllFeeds = async () => {
+    try {
+        const { getFeeds } = await import('../db/repository');
+        const feeds = getFeeds();
+        let totalImported = 0;
+
+        // Run sync concurrently for all feeds
+        const syncPromises = feeds.map(feed => syncFeed(feed.id, feed.url));
+        const results = await Promise.all(syncPromises);
+
+        for (const result of results) {
+            if (result.success && result.imported) {
+                totalImported += result.imported;
+            }
+        }
+
+        console.log(`Finished syncing all feeds. ${totalImported} total items imported.`);
+        return { success: true, imported: totalImported };
+    } catch (error) {
+        console.error('Failed to sync all feeds:', error);
+        return { success: false, error: String(error) };
+    }
+};

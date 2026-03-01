@@ -26,6 +26,7 @@ export interface IElectronAPI {
   ) => Promise<{ success: boolean; feed?: Feed; error?: string }>;
   deleteFeed: (id: number) => Promise<{ success: boolean; error?: string }>;
   markAsRead: (itemId: string) => Promise<{ success: boolean }>;
+  refreshFeeds: () => Promise<{ success: boolean; imported?: number; error?: string }>;
   openExternal: (url: string) => void;
 }
 

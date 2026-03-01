@@ -53,8 +53,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    loadFeeds();
-    loadItems(); // Initially load all items
+    refreshFeeds().catch(() => {
+      // Fallback in case sync fails so we still see old items
+      loadFeeds();
+      loadItems();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // When selected feed changes, reload items
@@ -119,6 +123,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const refreshFeeds = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await window.api.refreshFeeds();
+      if (result.success) {
+        // Reload feeds and items to show new data
+        await loadFeeds();
+        await loadItems(selectedFeedId || undefined);
+      } else {
+        setError(result.error || "Failed to refresh feeds");
+      }
+    } catch {
+      setError("Failed to refresh feeds");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const sortedItems = useMemo(() => {
     return [...items].sort((a, b) => {
       const dateA = new Date(a.pub_date).getTime();
@@ -143,7 +166,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         addFeed,
         deleteFeed,
         markItemAsRead,
-        refreshFeeds: loadFeeds,
+        refreshFeeds,
       }}
     >
       {children}

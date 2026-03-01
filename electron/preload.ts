@@ -7,5 +7,6 @@ contextBridge.exposeInMainWorld('api', {
     addFeed: (url: string) => ipcRenderer.invoke('add-feed', url),
     deleteFeed: (id: number) => ipcRenderer.invoke('delete-feed', id),
     markAsRead: (itemId: string) => ipcRenderer.invoke('mark-as-read', itemId),
+    refreshFeeds: () => ipcRenderer.invoke('refresh-feeds'),
     openExternal: (url: string) => ipcRenderer.send('open-external', url) // We'll handle this in main next
 })

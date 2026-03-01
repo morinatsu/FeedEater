@@ -2,7 +2,7 @@ import { useAppContext } from "../context/AppContext";
 import { useState } from "react";
 
 export const Sidebar = () => {
-  const { feeds, selectedFeedId, setSelectedFeedId, addFeed, deleteFeed } = useAppContext();
+  const { feeds, selectedFeedId, setSelectedFeedId, addFeed, deleteFeed, refreshFeeds, isLoading } = useAppContext();
   const [newUrl, setNewUrl] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
@@ -19,7 +19,17 @@ export const Sidebar = () => {
     <div className="sidebar">
       <div className="sidebar-header">
         <h2>Feeds</h2>
-        <button onClick={() => setIsAdding(!isAdding)}>+</button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            onClick={() => refreshFeeds()}
+            title="Refresh All Feeds"
+            disabled={isLoading}
+            style={{ opacity: isLoading ? 0.5 : 1 }}
+          >
+            {isLoading ? "⏳" : "🔄"}
+          </button>
+          <button onClick={() => setIsAdding(!isAdding)} title="Add Feed" disabled={isLoading}>+</button>
+        </div>
       </div>
 
       {isAdding && (
