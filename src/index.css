@@ -230,6 +230,12 @@ body {
   text-decoration: underline;
 }
 
+.article-meta .feed-name {
+  font-size: 0.85rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--border-color);
+}
+
 .article-content {
   line-height: 1.6;
   font-size: 1.1rem;

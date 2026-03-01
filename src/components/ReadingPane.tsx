@@ -2,8 +2,9 @@ import { useAppContext } from "../context/AppContext";
 import { useEffect } from "react";
 
 export const ReadingPane = () => {
-  const { items, selectedItemId, markItemAsRead } = useAppContext();
+  const { items, feeds, selectedItemId, markItemAsRead } = useAppContext();
   const item = items.find((i) => i.id === selectedItemId);
+  const feed = item ? feeds.find((f) => f.id === item.feed_id) : null;
 
   useEffect(() => {
     // Mark as read when opened
@@ -56,6 +57,7 @@ export const ReadingPane = () => {
             View Original
           </a>
           <span>{new Date(item.pub_date).toLocaleString()}</span>
+          {feed && <span className="feed-name">{feed.title}</span>}
         </div>
       </header>
 
