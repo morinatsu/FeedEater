@@ -6,6 +6,7 @@ import { autoUpdater } from 'electron-updater'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // ...
+import { setupApplicationMenu } from './menu'
 process.env.DIST = path.join(__dirname, '../dist')
 process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : path.join(process.env.DIST, '../public')
 
@@ -98,6 +99,7 @@ ipcMain.on('open-external', (_event, url: string) => {
 
 app.whenReady().then(() => {
   initDB()
+  setupApplicationMenu()
   createWindow()
 
   // Configure automatic updates
