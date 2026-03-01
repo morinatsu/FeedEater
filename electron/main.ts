@@ -69,7 +69,7 @@ app.on('activate', () => {
 })
 
 import { ipcMain } from 'electron'
-import { getFeeds, getItemsByFeed, getAllItems, markItemAsRead } from './db/repository'
+import { getFeeds, getItemsByFeed, getAllItems, markItemAsRead, deleteFeedById } from './db/repository'
 import { registerFeed } from './services/rss'
 
 // ===== IPC Handlers =====
@@ -86,6 +86,16 @@ ipcMain.handle('get-items', (_event, feedId?: number) => {
 
 ipcMain.handle('add-feed', async (_event, url: string) => {
   return await registerFeed(url)
+})
+
+ipcMain.handle('delete-feed', (_event, id: number) => {
+  try {
+    deleteFeedById(id)
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to delete feed:', error)
+    return { success: false, error: String(error) }
+  }
 })
 
 ipcMain.handle('mark-as-read', (_event, itemId: string) => {

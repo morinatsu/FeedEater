@@ -15,6 +15,7 @@ interface AppContextType {
   setSelectedItemId: (id: string | null) => void;
   setSortOrder: (order: "desc" | "asc") => void;
   addFeed: (url: string) => Promise<void>;
+  deleteFeed: (id: number) => Promise<void>;
   markItemAsRead: (id: string) => Promise<void>;
   refreshFeeds: () => Promise<void>;
 }
@@ -81,6 +82,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const deleteFeed = async (id: number) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await window.api.deleteFeed(id);
+      if (result.success) {
+        if (selectedFeedId === id) {
+          setSelectedFeedId(null);
+        }
+        await loadFeeds();
+        if (selectedFeedId === null || selectedFeedId === id) {
+          await loadItems();
+        }
+      } else {
+        setError(result.error || "Failed to delete feed");
+      }
+    } catch {
+      setError("Failed to delete feed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const markItemAsRead = async (id: string) => {
     try {
       await window.api.markAsRead(id);
@@ -117,6 +141,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setSelectedItemId,
         setSortOrder,
         addFeed,
+        deleteFeed,
         markItemAsRead,
         refreshFeeds: loadFeeds,
       }}

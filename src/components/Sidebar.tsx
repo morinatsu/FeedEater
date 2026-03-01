@@ -2,7 +2,7 @@ import { useAppContext } from "../context/AppContext";
 import { useState } from "react";
 
 export const Sidebar = () => {
-  const { feeds, selectedFeedId, setSelectedFeedId, addFeed } = useAppContext();
+  const { feeds, selectedFeedId, setSelectedFeedId, addFeed, deleteFeed } = useAppContext();
   const [newUrl, setNewUrl] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
@@ -47,6 +47,12 @@ export const Sidebar = () => {
             key={feed.id}
             className={selectedFeedId === feed.id ? "selected" : ""}
             onClick={() => setSelectedFeedId(feed.id)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              if (window.confirm(`「${feed.title}」を削除してもよろしいですか？`)) {
+                deleteFeed(feed.id);
+              }
+            }}
           >
             {feed.title}
           </li>

@@ -35,6 +35,15 @@ export const getFeedById = (id: number): Feed | undefined => {
     return db.prepare('SELECT * FROM feeds WHERE id = ?').get(id) as Feed | undefined;
 };
 
+export const deleteFeedById = (id: number): void => {
+    const db = getDB();
+    const transaction = db.transaction(() => {
+        db.prepare('DELETE FROM items WHERE feed_id = ?').run(id);
+        db.prepare('DELETE FROM feeds WHERE id = ?').run(id);
+    });
+    transaction();
+};
+
 // ==== Items ====
 
 export const insertItem = (item: Omit<RSSItem, 'is_read'>) => {
