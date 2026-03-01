@@ -1,8 +1,18 @@
+import { useEffect } from "react";
 import { useAppContext } from "../context/AppContext";
 
 export const ItemList = () => {
   const { items, selectedItemId, setSelectedItemId, sortOrder, setSortOrder, isLoading } =
     useAppContext();
+
+  useEffect(() => {
+    if (selectedItemId) {
+      const selectedEl = document.querySelector(".item-card.selected");
+      if (selectedEl) {
+        selectedEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+  }, [selectedItemId]);
 
   if (isLoading && items.length === 0) {
     return <div className="item-list-container loading">Loading items...</div>;
