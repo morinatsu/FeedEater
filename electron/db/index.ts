@@ -5,21 +5,26 @@ import fs from 'fs';
 
 let db: Database.Database | null = null;
 
-export const initDB = () => {
-    // Determine where to store the database file.
-    // In production, app.getPath('userData') is the safe place.
-    const userDataPath = app.getPath('userData');
-    const dbDir = path.join(userDataPath, 'db');
+export const initDB = (customDbPath?: string) => {
+    let finalDbPath = customDbPath;
 
-    // Ensure the db directory exists
-    if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
+    if (!finalDbPath) {
+        // Determine where to store the database file.
+        // In production, app.getPath('userData') is the safe place.
+        const userDataPath = app.getPath('userData');
+        const dbDir = path.join(userDataPath, 'db');
+
+        // Ensure the db directory exists
+        if (!fs.existsSync(dbDir)) {
+            fs.mkdirSync(dbDir, { recursive: true });
+        }
+
+        finalDbPath = path.join(dbDir, 'feedeater.sqlite');
     }
 
-    const dbPath = path.join(dbDir, 'feedeater.sqlite');
-    console.log('Database path:', dbPath);
+    console.log('Database path:', finalDbPath);
 
-    db = new Database(dbPath);
+    db = new Database(finalDbPath);
 
     // Enable WAL mode for better performance
     db.pragma('journal_mode = WAL');
