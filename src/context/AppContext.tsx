@@ -17,6 +17,8 @@ interface AppContextType {
   addFeed: (url: string) => Promise<void>;
   deleteFeed: (id: number) => Promise<void>;
   markItemAsRead: (id: string) => Promise<void>;
+  markItemAsUnread: (id: string) => Promise<void>;
+  markFeedAsUnread: (feedId: number) => Promise<void>;
   refreshFeeds: () => Promise<void>;
 }
 
@@ -123,6 +125,34 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const markItemAsUnread = async (id: string) => {
+    try {
+      await window.api.markAsRead(id, false);
+      // Optimistically update UI
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === id ? { ...item, is_read: false } : item,
+        ),
+      );
+    } catch (err) {
+      console.error("Failed to mark as unread", err);
+    }
+  };
+
+  const markFeedAsUnread = async (feedId: number) => {
+    try {
+      await window.api.markFeedAsRead(feedId, false);
+      // Optimistically update UI
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.feed_id === feedId ? { ...item, is_read: false } : item,
+        ),
+      );
+    } catch (err) {
+      console.error("Failed to mark feed as unread", err);
+    }
+  };
+
   const refreshFeeds = async () => {
     setIsLoading(true);
     setError(null);
@@ -166,6 +196,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         addFeed,
         deleteFeed,
         markItemAsRead,
+        markItemAsUnread,
+        markFeedAsUnread,
         refreshFeeds,
       }}
     >

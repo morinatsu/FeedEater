@@ -69,3 +69,8 @@ export const markItemAsRead = (itemId: string, isRead: boolean = true) => {
     const db = getDB();
     db.prepare('UPDATE items SET is_read = ? WHERE id = ?').run(isRead ? 1 : 0, itemId);
 };
+
+export const markFeedAsRead = (feedId: number, isRead: boolean = true) => {
+    const db = getDB();
+    db.prepare('UPDATE items SET is_read = ? WHERE feed_id = ?').run(isRead ? 1 : 0, feedId);
+};

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useAppContext } from "../context/AppContext";
 
 export const ItemList = () => {
-  const { items, selectedItemId, setSelectedItemId, sortOrder, setSortOrder, isLoading } =
+  const { items, selectedItemId, setSelectedItemId, sortOrder, setSortOrder, isLoading, markItemAsUnread } =
     useAppContext();
 
   useEffect(() => {
@@ -40,6 +40,13 @@ export const ItemList = () => {
             key={item.id}
             className={`item-card ${selectedItemId === item.id ? "selected" : ""} ${item.is_read ? "read" : "unread"}`}
             onClick={() => setSelectedItemId(item.id)}
+            onContextMenu={async (e) => {
+              e.preventDefault();
+              const action = await window.api.showItemContextMenu();
+              if (action === 'unread') {
+                markItemAsUnread(item.id);
+              }
+            }}
           >
             <h3>{item.title}</h3>
             <div className="item-meta">

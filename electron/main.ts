@@ -68,8 +68,8 @@ app.on('activate', () => {
   }
 })
 
-import { ipcMain } from 'electron'
-import { getFeeds, getItemsByFeed, getAllItems, markItemAsRead, deleteFeedById } from './db/repository'
+import { ipcMain, Menu } from 'electron'
+import { getFeeds, getItemsByFeed, getAllItems, markItemAsRead, deleteFeedById, markFeedAsRead } from './db/repository'
 import { registerFeed, syncAllFeeds } from './services/rss'
 
 // ===== IPC Handlers =====
@@ -98,9 +98,42 @@ ipcMain.handle('delete-feed', (_event, id: number) => {
   }
 })
 
-ipcMain.handle('mark-as-read', (_event, itemId: string) => {
-  markItemAsRead(itemId, true)
+ipcMain.handle('mark-as-read', (_event, itemId: string, isRead: boolean = true) => {
+  markItemAsRead(itemId, isRead)
   return { success: true }
+})
+
+ipcMain.handle('mark-feed-as-read', (_event, feedId: number, isRead: boolean = true) => {
+  markFeedAsRead(feedId, isRead)
+  return { success: true }
+})
+
+ipcMain.handle('show-feed-context-menu', () => {
+  return new Promise((resolve) => {
+    const template = [
+      { label: '未読にする', click: () => resolve('unread') },
+      { type: 'separator' as const },
+      { label: '削除', click: () => resolve('delete') },
+    ]
+    const menu = Menu.buildFromTemplate(template)
+    menu.popup()
+    menu.once('menu-will-close', () => {
+      setTimeout(() => resolve('cancel'), 100)
+    })
+  })
+})
+
+ipcMain.handle('show-item-context-menu', () => {
+  return new Promise((resolve) => {
+    const template = [
+      { label: '未読にする', click: () => resolve('unread') },
+    ]
+    const menu = Menu.buildFromTemplate(template)
+    menu.popup()
+    menu.once('menu-will-close', () => {
+      setTimeout(() => resolve('cancel'), 100)
+    })
+  })
 })
 
 ipcMain.handle('refresh-feeds', async () => {

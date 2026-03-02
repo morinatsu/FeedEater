@@ -14,17 +14,37 @@ function AppContent() {
       // Don't intercept if user is typing in an input
       if (document.activeElement?.tagName === "INPUT") return;
 
-      if (e.key === "j" || e.key === "ArrowDown") {
+      if (e.key.toLowerCase() === "j" || e.key === "ArrowDown") {
         const currentIndex = items.findIndex((i) => i.id === selectedItemId);
-        if (currentIndex < items.length - 1) {
-          setSelectedItemId(items[currentIndex + 1].id);
-        } else if (items.length > 0 && currentIndex === -1) {
-          setSelectedItemId(items[0].id);
+        if (e.shiftKey && e.key.toLowerCase() === "j") {
+          const nextUnreadIndex = items.findIndex((i, idx) => idx > Math.max(currentIndex, -1) && !i.is_read);
+          if (nextUnreadIndex !== -1) {
+            setSelectedItemId(items[nextUnreadIndex].id);
+          }
+        } else {
+          if (currentIndex < items.length - 1) {
+            setSelectedItemId(items[currentIndex + 1].id);
+          } else if (items.length > 0 && currentIndex === -1) {
+            setSelectedItemId(items[0].id);
+          }
         }
-      } else if (e.key === "k" || e.key === "ArrowUp") {
+      } else if (e.key.toLowerCase() === "k" || e.key === "ArrowUp") {
         const currentIndex = items.findIndex((i) => i.id === selectedItemId);
-        if (currentIndex > 0) {
-          setSelectedItemId(items[currentIndex - 1].id);
+        if (e.shiftKey && e.key.toLowerCase() === "k") {
+          let prevUnreadIndex = -1;
+          for (let i = (currentIndex !== -1 ? currentIndex : items.length) - 1; i >= 0; i--) {
+            if (!items[i].is_read) {
+              prevUnreadIndex = i;
+              break;
+            }
+          }
+          if (prevUnreadIndex !== -1) {
+            setSelectedItemId(items[prevUnreadIndex].id);
+          }
+        } else {
+          if (currentIndex > 0) {
+            setSelectedItemId(items[currentIndex - 1].id);
+          }
         }
       }
     };
