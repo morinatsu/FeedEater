@@ -1,6 +1,6 @@
 import { app, BrowserWindow, shell } from 'electron'
 import * as path from 'path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { initDB, closeDB } from './db/index'
 import { autoUpdater } from 'electron-updater'
 
@@ -73,11 +73,23 @@ import { getFeeds, getItemsByFeed, getAllItems, markItemAsRead, deleteFeedById, 
 import { registerFeed, syncAllFeeds } from './services/rss'
 
 // ===== IPC Handlers =====
-ipcMain.handle('get-feeds', () => {
+function validateSender(event: Electron.IpcMainInvokeEvent | Electron.IpcMainEvent) {
+  const senderUrl = event.senderFrame?.url || event.sender?.getURL() || '';
+  const expectedFileUrl = pathToFileURL(path.join(process.env.DIST as string, 'index.html')).href;
+  const isSafe = (VITE_DEV_SERVER_URL && senderUrl.startsWith(VITE_DEV_SERVER_URL)) ||
+    (senderUrl === expectedFileUrl);
+  if (!isSafe) {
+    throw new Error('Unauthorized IPC message from: ' + senderUrl);
+  }
+}
+
+ipcMain.handle('get-feeds', (event) => {
+  validateSender(event)
   return getFeeds()
 })
 
 ipcMain.handle('get-items', (_event, feedId?: number) => {
+  validateSender(_event)
   if (feedId) {
     return getItemsByFeed(feedId)
   }
@@ -85,10 +97,12 @@ ipcMain.handle('get-items', (_event, feedId?: number) => {
 })
 
 ipcMain.handle('add-feed', async (_event, url: string) => {
+  validateSender(_event)
   return await registerFeed(url)
 })
 
 ipcMain.handle('delete-feed', (_event, id: number) => {
+  validateSender(_event)
   try {
     deleteFeedById(id)
     return { success: true }
@@ -99,16 +113,19 @@ ipcMain.handle('delete-feed', (_event, id: number) => {
 })
 
 ipcMain.handle('mark-as-read', (_event, itemId: string, isRead: boolean = true) => {
+  validateSender(_event)
   markItemAsRead(itemId, isRead)
   return { success: true }
 })
 
 ipcMain.handle('mark-feed-as-read', (_event, feedId: number, isRead: boolean = true) => {
+  validateSender(_event)
   markFeedAsRead(feedId, isRead)
   return { success: true }
 })
 
-ipcMain.handle('show-feed-context-menu', () => {
+ipcMain.handle('show-feed-context-menu', (event) => {
+  validateSender(event)
   return new Promise((resolve) => {
     const template = [
       { label: '未読にする', click: () => resolve('unread') },
@@ -123,7 +140,8 @@ ipcMain.handle('show-feed-context-menu', () => {
   })
 })
 
-ipcMain.handle('show-item-context-menu', () => {
+ipcMain.handle('show-item-context-menu', (event) => {
+  validateSender(event)
   return new Promise((resolve) => {
     const template = [
       { label: '未読にする', click: () => resolve('unread') },
@@ -136,11 +154,13 @@ ipcMain.handle('show-item-context-menu', () => {
   })
 })
 
-ipcMain.handle('refresh-feeds', async () => {
+ipcMain.handle('refresh-feeds', async (event) => {
+  validateSender(event)
   return await syncAllFeeds()
 })
 
 ipcMain.on('open-external', (_event, url: string) => {
+  validateSender(_event)
   shell.openExternal(url)
 })
 

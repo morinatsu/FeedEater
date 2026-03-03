@@ -1,5 +1,6 @@
 import { useAppContext } from "../context/AppContext";
 import { useEffect } from "react";
+import DOMPurify from "dompurify";
 
 export const ReadingPane = () => {
   const { items, feeds, selectedItemId, markItemAsRead } = useAppContext();
@@ -63,7 +64,12 @@ export const ReadingPane = () => {
 
       <div
         className="article-content"
-        dangerouslySetInnerHTML={{ __html: item.content }}
+        dangerouslySetInnerHTML={{
+          __html: DOMPurify.sanitize(item.content, {
+            ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'li', 'ol', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'img', 'span', 'div', 'blockquote', 'code', 'pre'],
+            ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class'],
+          })
+        }}
         onClick={handleContentClick}
       />
     </div>

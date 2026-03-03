@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { addFeed, getFeeds, deleteFeedById, insertItem, getItemsByFeed, markItemAsRead } from './repository';
-import * as dbModule from './index';
+import { addFeed, deleteFeedById, insertItem, markItemAsRead } from './repository';
+
 
 // Mock getDB instead of actual better-sqlite3
 const mockRun = vi.fn();
