@@ -48,13 +48,20 @@ async function fetchAndParseFeed(url: string) {
 
 /**
  * Validates a URL, fetches the feed, adds it to the DB if successful, and returns the basic feed info.
+ * Enforces HTTPS for security.
  */
 export const registerFeed = async (url: string) => {
     try {
-        const feed = await fetchAndParseFeed(url);
+        // Enforce HTTPS
+        let secureUrl = url;
+        if (secureUrl.startsWith('http://')) {
+            secureUrl = secureUrl.replace('http://', 'https://');
+        }
+
+        const feed = await fetchAndParseFeed(secureUrl);
         // Add to database
         const title = feed.title || 'Untitled Feed';
-        const newFeed = addFeed(title, url);
+        const newFeed = addFeed(title, secureUrl);
 
         // Immediately fetch items for the newly added feed
         await syncFeed(newFeed.id, url);

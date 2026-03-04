@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, shell, protocol, net } from 'electron'
 import * as path from 'path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { initDB, closeDB } from './db/index'
@@ -45,10 +45,24 @@ function createWindow() {
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL)
   } else {
-    // win.loadFile('dist/index.html')
-    win.loadFile(path.join(process.env.DIST as string, 'index.html'))
+    // Instead of win.loadFile(path.join(process.env.DIST as string, 'index.html'))
+    // we use the custom protocol
+    win.loadURL('app://-/index.html')
   }
 }
+
+// Register protocol as privileged before app is ready
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'app',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
+  },
+])
 
 app.on('window-all-closed', () => {
   // Always close the DB to prevent corruption
@@ -68,7 +82,7 @@ app.on('activate', () => {
   }
 })
 
-import { ipcMain, Menu } from 'electron'
+import { ipcMain, Menu, session } from 'electron'
 import { getFeeds, getItemsByFeed, getAllItems, markItemAsRead, deleteFeedById, markFeedAsRead } from './db/repository'
 import { registerFeed, syncAllFeeds } from './services/rss'
 
@@ -165,9 +179,35 @@ ipcMain.on('open-external', (_event, url: string) => {
 })
 
 app.whenReady().then(() => {
+  // Handle the custom app:// protocol to read local files
+  protocol.handle('app', (request) => {
+    const url = new URL(request.url)
+    // Map app://-/path/to/file to local path
+    const filePath = path.join(process.env.DIST as string, url.pathname)
+    return net.fetch(pathToFileURL(filePath).href)
+  })
+
   initDB()
   setupApplicationMenu()
   createWindow()
+
+  // Deny all permission requests (camera, microphone, location, etc.) 
+  // to protect against malicious remote content in RSS feeds.
+  session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
+    callback(false)
+  })
+
+  // Enforce secure connections (Only Load Secure Content)
+  // This intercepts any outgoing HTTP requests and upgrades them to HTTPS
+  session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
+    // Only upgrade http:// requests, skip local dev server, file://, and ws:// for now
+    if (details.url.startsWith('http://') && !details.url.includes('localhost') && !details.url.includes('127.0.0.1')) {
+      const secureUrl = details.url.replace(/^http:\/\//i, 'https://')
+      callback({ redirectURL: secureUrl })
+    } else {
+      callback({})
+    }
+  })
 
   // Configure automatic updates
   autoUpdater.logger = console // Using console if electron-log is not installed

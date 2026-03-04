@@ -1,7 +1,7 @@
 {
   "name": "feedeater",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.4.2",
   "main": "dist-electron/main.js",
   "type": "module",
   "scripts": {
@@ -24,6 +24,7 @@
     "rss-parser": "^3.13.0"
   },
   "devDependencies": {
+    "@electron/fuses": "^2.1.0",
     "@eslint/js": "^9.39.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -60,6 +61,7 @@
         "nsis"
       ]
     },
+    "afterPack": "./build/afterPack.mjs",
     "nsis": {
       "oneClick": false,
       "perMachine": false,
