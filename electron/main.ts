@@ -89,9 +89,8 @@ import { registerFeed, syncAllFeeds } from './services/rss'
 // ===== IPC Handlers =====
 function validateSender(event: Electron.IpcMainInvokeEvent | Electron.IpcMainEvent) {
   const senderUrl = event.senderFrame?.url || event.sender?.getURL() || '';
-  const expectedFileUrl = pathToFileURL(path.join(process.env.DIST as string, 'index.html')).href;
   const isSafe = (VITE_DEV_SERVER_URL && senderUrl.startsWith(VITE_DEV_SERVER_URL)) ||
-    (senderUrl === expectedFileUrl);
+    (senderUrl === 'app://-/index.html');
   if (!isSafe) {
     throw new Error('Unauthorized IPC message from: ' + senderUrl);
   }
