@@ -5,7 +5,8 @@ import { syncAllFeeds } from './rss';
 vi.mock('../db/repository', () => ({
     getFeeds: vi.fn(),
     addFeed: vi.fn(),
-    insertItem: vi.fn()
+    insertItem: vi.fn(),
+    updateFeedError: vi.fn()
 }));
 
 // Mock rss-parser
