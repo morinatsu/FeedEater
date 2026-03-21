@@ -1,6 +1,7 @@
 import { useAppContext } from "../context/AppContext";
 import { useEffect } from "react";
 import DOMPurify from "dompurify";
+import EmptyItemIcon from '../assets/Empty_Item.png';
 
 export const ReadingPane = () => {
   const { items, feeds, selectedItemId, markItemAsRead } = useAppContext();
@@ -16,7 +17,8 @@ export const ReadingPane = () => {
 
   if (!item) {
     return (
-      <div className="reading-pane empty">
+      <div className="reading-pane empty" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', flexDirection: 'column' }}>
+        <img src={EmptyItemIcon} alt="No selection" style={{ maxWidth: '150px', marginBottom: '1rem', opacity: 0.7 }} />
         <div className="placeholder">Select an item to read</div>
       </div>
     );

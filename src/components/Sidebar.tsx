@@ -1,5 +1,8 @@
 import { useAppContext } from "../context/AppContext";
 import { useState } from "react";
+import AddFeedIcon from '../assets/Add_Feed.png';
+import AllItemsIcon from '../assets/All_Items.png';
+import RefreshIcon from '../assets/Refresh_Button.png';
 
 export const Sidebar = () => {
   const { feeds, selectedFeedId, setSelectedFeedId, addFeed, deleteFeed, refreshFeeds, isLoading, markFeedAsUnread } = useAppContext();
@@ -19,16 +22,18 @@ export const Sidebar = () => {
     <div className="sidebar">
       <div className="sidebar-header">
         <h2>Feeds</h2>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <button
             onClick={() => refreshFeeds()}
             title="Refresh All Feeds"
             disabled={isLoading}
-            style={{ opacity: isLoading ? 0.5 : 1 }}
+            style={{ opacity: isLoading ? 0.5 : 1, padding: '4px', display: 'flex', background: 'transparent', border: 'none', cursor: 'pointer' }}
           >
-            {isLoading ? "⏳" : "🔄"}
+            {isLoading ? "⏳" : <img src={RefreshIcon} alt="Refresh" width="20" height="20" />}
           </button>
-          <button onClick={() => setIsAdding(!isAdding)} title="Add Feed" disabled={isLoading}>+</button>
+          <button onClick={() => setIsAdding(!isAdding)} title="Add Feed" disabled={isLoading} style={{ padding: '4px', display: 'flex', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+            <img src={AddFeedIcon} alt="Add" width="20" height="20" />
+          </button>
         </div>
       </div>
 
@@ -49,7 +54,9 @@ export const Sidebar = () => {
         <li
           className={selectedFeedId === null ? "selected" : ""}
           onClick={() => setSelectedFeedId(null)}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
+          <img src={AllItemsIcon} alt="All" width="20" height="20" />
           All Items
         </li>
         {feeds.map((feed) => (
