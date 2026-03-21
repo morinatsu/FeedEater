@@ -5,6 +5,7 @@ export interface Feed {
   title: string;
   url: string;
   last_fetched: string | null;
+  error_msg?: string | null;
 }
 
 export interface RSSItem {
