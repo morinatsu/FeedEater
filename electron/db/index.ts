@@ -64,7 +64,7 @@ const createSchema = () => {
     // Add error_msg column to feeds table if it doesn't exist
     try {
         db.exec("ALTER TABLE feeds ADD COLUMN error_msg TEXT;");
-    } catch (e) {
+    } catch {
         // error_msg column already exists
     }
 
