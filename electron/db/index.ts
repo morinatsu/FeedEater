@@ -61,6 +61,13 @@ const createSchema = () => {
         );
     `);
 
+    // Add error_msg column to feeds table if it doesn't exist
+    try {
+        db.exec("ALTER TABLE feeds ADD COLUMN error_msg TEXT;");
+    } catch (e) {
+        // error_msg column already exists
+    }
+
     // Index for quick querying of unread status
     db.exec(`CREATE INDEX IF NOT EXISTS idx_items_is_read ON items(is_read);`);
     // Index for items belonging to a feed

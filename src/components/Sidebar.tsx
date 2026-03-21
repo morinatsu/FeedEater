@@ -76,7 +76,14 @@ export const Sidebar = () => {
               }
             }}
           >
-            {feed.title}
+            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+              <div>{feed.title}</div>
+              {feed.error_msg && (
+                <div style={{ fontSize: '0.8em', color: '#ff4444', textAlign: 'right', marginTop: '4px' }}>
+                  unreachable
+                </div>
+              )}
+            </div>
           </li>
         ))}
       </ul>

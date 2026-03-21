@@ -5,6 +5,7 @@ export interface Feed {
     title: string;
     url: string;
     last_fetched: string | null;
+    error_msg?: string | null;
 }
 
 export interface RSSItem {
@@ -42,6 +43,11 @@ export const deleteFeedById = (id: number): void => {
         db.prepare('DELETE FROM feeds WHERE id = ?').run(id);
     });
     transaction();
+};
+
+export const updateFeedError = (id: number, errorMsg: string | null): void => {
+    const db = getDB();
+    db.prepare('UPDATE feeds SET error_msg = ? WHERE id = ?').run(errorMsg, id);
 };
 
 // ==== Items ====
