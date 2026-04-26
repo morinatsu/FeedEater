@@ -16,13 +16,17 @@ describe('Sidebar', () => {
     it('renders feed list and all items option', () => {
         vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
             feeds: mockFeeds,
+            folders: [{ id: 1, name: 'News' }],
             selectedFeedId: null,
             setSelectedFeedId: vi.fn(),
             addFeed: vi.fn(),
             deleteFeed: vi.fn(),
             refreshFeeds: vi.fn(),
             isLoading: false,
-            markFeedAsUnread: vi.fn()
+            markFeedAsUnread: vi.fn(),
+            addFolder: vi.fn(),
+            deleteFolder: vi.fn(),
+            updateFeedFolder: vi.fn()
         } as unknown as ReturnType<typeof AppContextModule.useAppContext>);
 
         render(<Sidebar />);
@@ -36,13 +40,17 @@ describe('Sidebar', () => {
         const setSelectedFeedIdMock = vi.fn();
         vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
             feeds: mockFeeds,
+            folders: [{ id: 1, name: 'News' }],
             selectedFeedId: null,
-            setSelectedFeedId: setSelectedFeedIdMock,
+            setSelectedFeedId: setSelectedFeedIdMock || vi.fn(),
             addFeed: vi.fn(),
             deleteFeed: vi.fn(),
             refreshFeeds: vi.fn(),
             isLoading: false,
-            markFeedAsUnread: vi.fn()
+            markFeedAsUnread: vi.fn(),
+            addFolder: vi.fn(),
+            deleteFolder: vi.fn(),
+            updateFeedFolder: vi.fn()
         } as unknown as ReturnType<typeof AppContextModule.useAppContext>);
 
         render(<Sidebar />);
@@ -58,13 +66,17 @@ describe('Sidebar', () => {
         const addFeedMock = vi.fn();
         vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
             feeds: mockFeeds,
+            folders: [{ id: 1, name: 'News' }],
             selectedFeedId: null,
             setSelectedFeedId: vi.fn(),
             addFeed: addFeedMock,
             deleteFeed: vi.fn(),
             refreshFeeds: vi.fn(),
             isLoading: false,
-            markFeedAsUnread: vi.fn()
+            markFeedAsUnread: vi.fn(),
+            addFolder: vi.fn(),
+            deleteFolder: vi.fn(),
+            updateFeedFolder: vi.fn()
         } as unknown as ReturnType<typeof AppContextModule.useAppContext>);
 
         render(<Sidebar />);

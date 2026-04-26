@@ -1,11 +1,12 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
-import type { Feed, RSSItem } from "../types";
+import type { Feed, RSSItem, Folder } from "../types";
 
 interface AppContextType {
   feeds: Feed[];
   items: RSSItem[];
+  folders: Folder[];
   selectedFeedId: number | null;
   selectedItemId: string | null;
   sortOrder: "desc" | "asc";
@@ -20,6 +21,9 @@ interface AppContextType {
   markItemAsUnread: (id: string) => Promise<void>;
   markFeedAsUnread: (feedId: number) => Promise<void>;
   refreshFeeds: () => Promise<void>;
+  addFolder: (name: string) => Promise<void>;
+  deleteFolder: (id: number) => Promise<void>;
+  updateFeedFolder: (feedId: number, folderId: number | null) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -27,11 +31,21 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [items, setItems] = useState<RSSItem[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const loadFolders = async () => {
+    try {
+      const data = await window.api.getFolders();
+      setFolders(data);
+    } catch {
+      setError("Failed to load folders");
+    }
+  };
 
   const loadFeeds = async () => {
     try {
@@ -55,6 +69,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    loadFolders();
     refreshFeeds().catch(() => {
       // Fallback in case sync fails so we still see old items
       loadFeeds();
@@ -106,6 +121,58 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch {
       setError("Failed to delete feed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const addFolderFunc = async (name: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await window.api.addFolder(name);
+      if (result.success) {
+        await loadFolders();
+      } else {
+        setError(result.error || "Failed to add folder");
+      }
+    } catch {
+      setError("Failed to add folder");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteFolderFunc = async (id: number) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await window.api.deleteFolder(id);
+      if (result.success) {
+        await loadFolders();
+        await loadFeeds(); // Feed's folder_id might have been updated to null
+      } else {
+        setError(result.error || "Failed to delete folder");
+      }
+    } catch {
+      setError("Failed to delete folder");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateFeedFolderFunc = async (feedId: number, folderId: number | null) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await window.api.updateFeedFolder(feedId, folderId);
+      if (result.success) {
+        await loadFeeds();
+      } else {
+        setError(result.error || "Failed to update feed folder");
+      }
+    } catch {
+      setError("Failed to update feed folder");
     } finally {
       setIsLoading(false);
     }
@@ -185,6 +252,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       value={{
         feeds,
         items: sortedItems,
+        folders,
         selectedFeedId,
         selectedItemId,
         sortOrder,
@@ -199,6 +267,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         markItemAsUnread,
         markFeedAsUnread,
         refreshFeeds,
+        addFolder: addFolderFunc,
+        deleteFolder: deleteFolderFunc,
+        updateFeedFolder: updateFeedFolderFunc,
       }}
     >
       {children}

@@ -83,7 +83,10 @@ app.on('activate', () => {
 })
 
 import { ipcMain, Menu, session } from 'electron'
-import { getFeeds, getItemsByFeed, getAllItems, markItemAsRead, deleteFeedById, markFeedAsRead } from './db/repository'
+import { 
+  getFeeds, getItemsByFeed, getAllItems, markItemAsRead, deleteFeedById, markFeedAsRead,
+  getFolders, addFolder, deleteFolderById, updateFeedFolder
+} from './db/repository'
 import { registerFeed, syncAllFeeds } from './services/rss'
 
 // ===== IPC Handlers =====
@@ -95,6 +98,62 @@ function validateSender(event: Electron.IpcMainInvokeEvent | Electron.IpcMainEve
     throw new Error('Unauthorized IPC message from: ' + senderUrl);
   }
 }
+
+// ---- Folders ----
+
+ipcMain.handle('get-folders', (event) => {
+  validateSender(event)
+  return getFolders()
+})
+
+ipcMain.handle('add-folder', (event, name: string) => {
+  validateSender(event)
+  try {
+    const folder = addFolder(name)
+    return { success: true, folder }
+  } catch (error) {
+    console.error('Failed to add folder:', error)
+    return { success: false, error: String(error) }
+  }
+})
+
+ipcMain.handle('delete-folder', (event, id: number) => {
+  validateSender(event)
+  try {
+    deleteFolderById(id)
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to delete folder:', error)
+    return { success: false, error: String(error) }
+  }
+})
+
+ipcMain.handle('update-feed-folder', (event, feedId: number, folderId: number | null) => {
+  validateSender(event)
+  try {
+    updateFeedFolder(feedId, folderId)
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to update feed folder:', error)
+    return { success: false, error: String(error) }
+  }
+})
+
+ipcMain.handle('show-folder-context-menu', (event) => {
+  validateSender(event)
+  return new Promise((resolve) => {
+    const template = [
+      { label: '削除', click: () => resolve('delete') },
+    ]
+    const menu = Menu.buildFromTemplate(template)
+    menu.popup()
+    menu.once('menu-will-close', () => {
+      setTimeout(() => resolve('cancel'), 100)
+    })
+  })
+})
+
+// ---- Feeds & Items ----
 
 ipcMain.handle('get-feeds', (event) => {
   validateSender(event)
@@ -139,16 +198,34 @@ ipcMain.handle('mark-feed-as-read', (_event, feedId: number, isRead: boolean = t
 
 ipcMain.handle('show-feed-context-menu', (event) => {
   validateSender(event)
+  const folders = getFolders();
   return new Promise((resolve) => {
-    const template = [
-      { label: '未読にする', click: () => resolve('unread') },
-      { type: 'separator' as const },
-      { label: '削除', click: () => resolve('delete') },
+    const template: Electron.MenuItemConstructorOptions[] = [
+      { label: '未読にする', click: () => resolve({ action: 'unread' }) },
+      { type: 'separator' }
     ]
+
+    if (folders.length > 0) {
+      const submenu: Electron.MenuItemConstructorOptions[] = folders.map(f => ({
+        label: f.name,
+        click: () => resolve({ action: 'move', folderId: f.id })
+      }))
+      submenu.push({ type: 'separator' })
+      submenu.push({ label: 'フォルダから出す', click: () => resolve({ action: 'move', folderId: null }) })
+
+      template.push({
+        label: 'フォルダに移動',
+        submenu: submenu
+      })
+      template.push({ type: 'separator' })
+    }
+
+    template.push({ label: '削除', click: () => resolve({ action: 'delete' }) })
+
     const menu = Menu.buildFromTemplate(template)
     menu.popup()
     menu.once('menu-will-close', () => {
-      setTimeout(() => resolve('cancel'), 100)
+      setTimeout(() => resolve({ action: 'cancel' }), 100)
     })
   })
 })

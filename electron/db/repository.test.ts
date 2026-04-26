@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { addFeed, deleteFeedById, insertItem, markItemAsRead } from './repository';
+import { addFeed, deleteFeedById, insertItem, markItemAsRead, addFolder, deleteFolderById, updateFeedFolder } from './repository';
 
 
 // Mock getDB instead of actual better-sqlite3
@@ -56,6 +56,26 @@ describe('DB Repository', () => {
 
         markItemAsRead('item1');
         expect(mockDb.prepare).toHaveBeenCalledWith('UPDATE items SET is_read = ? WHERE id = ?');
+    });
+    it('should add a folder', () => {
+        mockRun.mockReturnValueOnce({ lastInsertRowid: 1 });
+        mockGet.mockReturnValueOnce({ id: 1, name: 'Tech' });
+
+        const folder = addFolder('Tech');
+        expect(mockDb.prepare).toHaveBeenCalledWith('INSERT INTO folders (name) VALUES (?)');
+        expect(folder).toBeDefined();
+        expect(folder.id).toBe(1);
+    });
+
+    it('should delete a folder', () => {
+        deleteFolderById(1);
+        expect(mockDb.prepare).toHaveBeenCalledWith('UPDATE feeds SET folder_id = NULL WHERE folder_id = ?');
+        expect(mockDb.prepare).toHaveBeenCalledWith('DELETE FROM folders WHERE id = ?');
+    });
+
+    it('should update feed folder', () => {
+        updateFeedFolder(1, 2);
+        expect(mockDb.prepare).toHaveBeenCalledWith('UPDATE feeds SET folder_id = ? WHERE id = ?');
     });
 });
 

@@ -37,13 +37,22 @@ export const initDB = (customDbPath?: string) => {
 const createSchema = () => {
     if (!db) return;
 
+    // Create Folders Table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS folders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL
+        );
+    `);
+
     // Create Feeds Table
     db.exec(`
         CREATE TABLE IF NOT EXISTS feeds (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT,
             url TEXT UNIQUE,
-            last_fetched DATETIME
+            last_fetched DATETIME,
+            folder_id INTEGER REFERENCES folders(id)
         );
     `);
 
@@ -66,6 +75,13 @@ const createSchema = () => {
         db.exec("ALTER TABLE feeds ADD COLUMN error_msg TEXT;");
     } catch {
         // error_msg column already exists
+    }
+
+    // Add folder_id column to feeds table if it doesn't exist (for existing DBs)
+    try {
+        db.exec("ALTER TABLE feeds ADD COLUMN folder_id INTEGER REFERENCES folders(id);");
+    } catch {
+        // folder_id column already exists
     }
 
     // Index for quick querying of unread status

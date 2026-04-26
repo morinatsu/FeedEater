@@ -1,11 +1,17 @@
 import { getDB } from './index';
 
+export interface Folder {
+    id: number;
+    name: string;
+}
+
 export interface Feed {
     id: number;
     title: string;
     url: string;
     last_fetched: string | null;
     error_msg?: string | null;
+    folder_id?: number | null;
 }
 
 export interface RSSItem {
@@ -17,6 +23,35 @@ export interface RSSItem {
     pub_date: string;
     is_read: boolean;
 }
+
+// ==== Folders ====
+
+export const addFolder = (name: string): Folder => {
+    const db = getDB();
+    const info = db.prepare('INSERT INTO folders (name) VALUES (?)').run(name);
+    return getFolderById(info.lastInsertRowid as number) as Folder;
+};
+
+export const getFolders = (): Folder[] => {
+    const db = getDB();
+    return db.prepare('SELECT * FROM folders ORDER BY id ASC').all() as Folder[];
+};
+
+export const getFolderById = (id: number): Folder | undefined => {
+    const db = getDB();
+    return db.prepare('SELECT * FROM folders WHERE id = ?').get(id) as Folder | undefined;
+};
+
+export const deleteFolderById = (id: number): void => {
+    const db = getDB();
+    const transaction = db.transaction(() => {
+        // フィードのfolder_idをNULLにしてフォルダから外す
+        db.prepare('UPDATE feeds SET folder_id = NULL WHERE folder_id = ?').run(id);
+        // フォルダを削除
+        db.prepare('DELETE FROM folders WHERE id = ?').run(id);
+    });
+    transaction();
+};
 
 // ==== Feeds ====
 
@@ -48,6 +83,11 @@ export const deleteFeedById = (id: number): void => {
 export const updateFeedError = (id: number, errorMsg: string | null): void => {
     const db = getDB();
     db.prepare('UPDATE feeds SET error_msg = ? WHERE id = ?').run(errorMsg, id);
+};
+
+export const updateFeedFolder = (id: number, folderId: number | null): void => {
+    const db = getDB();
+    db.prepare('UPDATE feeds SET folder_id = ? WHERE id = ?').run(folderId, id);
 };
 
 // ==== Items ====
