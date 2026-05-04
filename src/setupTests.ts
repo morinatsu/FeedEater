@@ -3,6 +3,14 @@ import { vi } from 'vitest'
 
 // Mock the window.api object for React component tests
 window.api = {
+    // Folders
+    getFolders: vi.fn(),
+    addFolder: vi.fn(),
+    deleteFolder: vi.fn(),
+    updateFeedFolder: vi.fn(),
+    showFolderContextMenu: vi.fn(),
+
+    // Feeds & Items
     getFeeds: vi.fn(),
     getItems: vi.fn(),
     addFeed: vi.fn(),
