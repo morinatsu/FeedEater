@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { addFeed, deleteFeedById, insertItem, markItemAsRead, addFolder, deleteFolderById, updateFeedFolder } from './repository';
+import { addFeed, deleteFeedById, insertItem, markItemAsRead, addFolder, deleteFolderById, updateFeedFolder, getFolders, getFeeds, updateFeedError, getItemsByFeed, getAllItems, markFeedAsRead } from './repository';
 
 
 // Mock getDB instead of actual better-sqlite3
@@ -76,6 +76,44 @@ describe('DB Repository', () => {
     it('should update feed folder', () => {
         updateFeedFolder(1, 2);
         expect(mockDb.prepare).toHaveBeenCalledWith('UPDATE feeds SET folder_id = ? WHERE id = ?');
+    });
+
+    it('should get folders', () => {
+        mockAll.mockReturnValueOnce([{ id: 1, name: 'Tech' }]);
+        const folders = getFolders();
+        expect(mockDb.prepare).toHaveBeenCalledWith('SELECT * FROM folders ORDER BY id ASC');
+        expect(folders).toEqual([{ id: 1, name: 'Tech' }]);
+    });
+
+    it('should get feeds', () => {
+        mockAll.mockReturnValueOnce([{ id: 1, title: 'Test Feed', url: 'https://example.com/feed.xml' }]);
+        const feeds = getFeeds();
+        expect(mockDb.prepare).toHaveBeenCalledWith('SELECT * FROM feeds ORDER BY id ASC');
+        expect(feeds).toEqual([{ id: 1, title: 'Test Feed', url: 'https://example.com/feed.xml' }]);
+    });
+
+    it('should update feed error', () => {
+        updateFeedError(1, 'Error message');
+        expect(mockDb.prepare).toHaveBeenCalledWith('UPDATE feeds SET error_msg = ? WHERE id = ?');
+    });
+
+    it('should get items by feed', () => {
+        mockAll.mockReturnValueOnce([{ id: 'item1', title: 'Test Article 1' }]);
+        const items = getItemsByFeed(1);
+        expect(mockDb.prepare).toHaveBeenCalledWith('SELECT * FROM items WHERE feed_id = ? ORDER BY pub_date DESC');
+        expect(items).toEqual([{ id: 'item1', title: 'Test Article 1' }]);
+    });
+
+    it('should get all items', () => {
+        mockAll.mockReturnValueOnce([{ id: 'item1', title: 'Test Article 1' }]);
+        const items = getAllItems();
+        expect(mockDb.prepare).toHaveBeenCalledWith('SELECT * FROM items ORDER BY pub_date DESC');
+        expect(items).toEqual([{ id: 'item1', title: 'Test Article 1' }]);
+    });
+
+    it('should mark feed as read', () => {
+        markFeedAsRead(1);
+        expect(mockDb.prepare).toHaveBeenCalledWith('UPDATE items SET is_read = ? WHERE feed_id = ?');
     });
 });
 

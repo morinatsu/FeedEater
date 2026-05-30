@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { syncAllFeeds } from './rss';
+import { syncAllFeeds, registerFeed, syncFeed } from './rss';
 
 // Mock the repository
 vi.mock('../db/repository', () => ({
@@ -26,7 +26,7 @@ vi.mock('rss-parser', () => {
     };
 });
 
-describe('rss service syncAllFeeds', () => {
+describe('rss service', () => {
     let globalFetchBackup: typeof global.fetch;
 
     beforeEach(() => {
@@ -76,5 +76,63 @@ describe('rss service syncAllFeeds', () => {
         expect(result).toEqual({ success: false, error: 'Error: DB Error' });
 
         consoleSpy.mockRestore();
+    });
+
+    describe('registerFeed', () => {
+        it('should register a new feed successfully and enforce HTTPS', async () => {
+            const { addFeed } = await import('../db/repository');
+            // @ts-expect-error
+            addFeed.mockReturnValue({ id: 99, title: 'Mock Feed', url: 'https://example.com/feed' });
+
+            const result = await registerFeed('http://example.com/feed');
+
+            expect(result.success).toBe(true);
+            expect(result.feed).toBeDefined();
+            expect(addFeed).toHaveBeenCalledWith('Mock Feed', 'https://example.com/feed');
+        });
+
+        it('should return an error if fetching the feed fails', async () => {
+            global.fetch = vi.fn().mockResolvedValue({
+                ok: false,
+                status: 404
+            } as unknown as Response);
+
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+            const result = await registerFeed('https://example.com/invalid');
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('HTTP error! status: 404');
+            consoleSpy.mockRestore();
+        });
+    });
+
+    describe('syncFeed', () => {
+        it('should sync a specific feed successfully', async () => {
+            const { insertItem, updateFeedError } = await import('../db/repository');
+
+            const result = await syncFeed(99, 'https://example.com/feed');
+
+            expect(result.success).toBe(true);
+            expect(result.imported).toBe(2);
+            expect(insertItem).toHaveBeenCalledTimes(2);
+            expect(updateFeedError).toHaveBeenCalledWith(99, null);
+        });
+
+        it('should return an error if syncing the feed fails', async () => {
+            global.fetch = vi.fn().mockResolvedValue({
+                ok: false,
+                status: 500
+            } as unknown as Response);
+
+            const { updateFeedError } = await import('../db/repository');
+
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+            const result = await syncFeed(99, 'https://example.com/error-feed');
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('HTTP error! status: 500');
+            expect(updateFeedError).toHaveBeenCalledWith(99, expect.stringContaining('HTTP error! status: 500'));
+            consoleSpy.mockRestore();
+        });
     });
 });

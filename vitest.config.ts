@@ -6,6 +6,10 @@ export default defineConfig({
     test: {
         environment: 'jsdom',
         setupFiles: ['./src/setupTests.ts'],
-        globals: true
+        globals: true,
+        // Exclude Windows-specific tests on non-Windows platforms
+        exclude: process.platform === 'win32'
+            ? ['**/node_modules/**', '**/dist/**']
+            : ['**/node_modules/**', '**/dist/**', '**/*.win.test.ts', '**/*.win.test.tsx']
     }
 })
