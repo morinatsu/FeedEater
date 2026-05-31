@@ -86,10 +86,15 @@ describe('DB Repository', () => {
     });
 
     it('should get feeds', () => {
-        mockAll.mockReturnValueOnce([{ id: 1, title: 'Test Feed', url: 'https://example.com/feed.xml' }]);
+        mockAll.mockReturnValueOnce([{ id: 1, title: 'Test Feed', url: 'https://example.com/feed.xml', unread_count: 0 }]);
         const feeds = getFeeds();
-        expect(mockDb.prepare).toHaveBeenCalledWith('SELECT * FROM feeds ORDER BY id ASC');
-        expect(feeds).toEqual([{ id: 1, title: 'Test Feed', url: 'https://example.com/feed.xml' }]);
+        expect(mockDb.prepare).toHaveBeenCalledWith(`
+        SELECT f.*, 
+        (SELECT COUNT(*) FROM items i WHERE i.feed_id = f.id AND i.is_read = 0) as unread_count 
+        FROM feeds f 
+        ORDER BY f.id ASC
+    `);
+        expect(feeds).toEqual([{ id: 1, title: 'Test Feed', url: 'https://example.com/feed.xml', unread_count: 0 }]);
     });
 
     it('should update feed error', () => {
