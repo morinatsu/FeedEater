@@ -44,10 +44,11 @@ export const Sidebar = () => {
   };
 
   const renderFeedItem = (feed: Feed, depth: number = 0) => {
+    const isUnread = (feed.unread_count ?? 0) > 0;
     return (
       <li
         key={feed.id}
-        className={selectedFeedId === feed.id ? "selected" : ""}
+        className={`${selectedFeedId === feed.id ? "selected" : ""} ${isUnread ? "unread" : "read"}`}
         onClick={(e) => {
           e.stopPropagation();
           setSelectedFeedId(feed.id);
@@ -142,6 +143,7 @@ export const Sidebar = () => {
         {folders.map(folder => {
           const isExpanded = expandedFolders.has(folder.id);
           const folderFeeds = feeds.filter(f => f.folder_id === folder.id);
+          const hasUnread = folderFeeds.some(f => (f.unread_count ?? 0) > 0);
 
           return (
             <div key={`folder-${folder.id}`}>
@@ -158,6 +160,7 @@ export const Sidebar = () => {
                   }
                 }}
                 style={{ fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', paddingLeft: '8px' }}
+                className={hasUnread ? "unread" : "read"}
               >
                 <span>📁 {folder.name}</span>
                 <span>{isExpanded ? '▼' : '▶'}</span>

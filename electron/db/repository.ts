@@ -12,6 +12,7 @@ export interface Feed {
     last_fetched: string | null;
     error_msg?: string | null;
     folder_id?: number | null;
+    unread_count?: number;
 }
 
 export interface RSSItem {
@@ -63,12 +64,22 @@ export const addFeed = (title: string, url: string): Feed => {
 
 export const getFeeds = (): Feed[] => {
     const db = getDB();
-    return db.prepare('SELECT * FROM feeds ORDER BY id ASC').all() as Feed[];
+    return db.prepare(`
+        SELECT f.*, 
+        (SELECT COUNT(*) FROM items i WHERE i.feed_id = f.id AND i.is_read = 0) as unread_count 
+        FROM feeds f 
+        ORDER BY f.id ASC
+    `).all() as Feed[];
 };
 
 export const getFeedById = (id: number): Feed | undefined => {
     const db = getDB();
-    return db.prepare('SELECT * FROM feeds WHERE id = ?').get(id) as Feed | undefined;
+    return db.prepare(`
+        SELECT f.*, 
+        (SELECT COUNT(*) FROM items i WHERE i.feed_id = f.id AND i.is_read = 0) as unread_count 
+        FROM feeds f 
+        WHERE f.id = ?
+    `).get(id) as Feed | undefined;
 };
 
 export const deleteFeedById = (id: number): void => {

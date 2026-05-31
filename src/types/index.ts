@@ -12,6 +12,7 @@ export interface Feed {
   last_fetched: string | null;
   error_msg?: string | null;
   folder_id?: number | null;
+  unread_count?: number;
 }
 
 export interface RSSItem {

@@ -107,6 +107,14 @@ body {
   border-left: 3px solid var(--accent-color);
 }
 
+.feed-list li.read {
+  color: var(--text-secondary);
+}
+
+.feed-list li.unread {
+  color: var(--text-primary);
+}
+
 /* === Item List === */
 .item-list-container {
   width: 350px;

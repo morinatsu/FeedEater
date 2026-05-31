@@ -195,6 +195,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           item.id === id ? { ...item, is_read: true } : item,
         ),
       );
+      // Optimistically update feeds unread_count
+      const targetItem = items.find((i) => i.id === id);
+      if (targetItem && !targetItem.is_read) {
+        setFeeds((prevFeeds) =>
+          prevFeeds.map((feed) =>
+            feed.id === targetItem.feed_id
+              ? { ...feed, unread_count: Math.max(0, (feed.unread_count || 0) - 1) }
+              : feed
+          )
+        );
+      }
     } catch (err) {
       console.error("Failed to mark as read", err);
     }
@@ -209,6 +220,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           item.id === id ? { ...item, is_read: false } : item,
         ),
       );
+      // Optimistically update feeds unread_count
+      const targetItem = items.find((i) => i.id === id);
+      if (targetItem && targetItem.is_read) {
+        setFeeds((prevFeeds) =>
+          prevFeeds.map((feed) =>
+            feed.id === targetItem.feed_id
+              ? { ...feed, unread_count: (feed.unread_count || 0) + 1 }
+              : feed
+          )
+        );
+      }
     } catch (err) {
       console.error("Failed to mark as unread", err);
     }
@@ -223,6 +245,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           item.feed_id === feedId ? { ...item, is_read: false } : item,
         ),
       );
+      // Reload feeds to get correct unread_count
+      await loadFeeds();
     } catch (err) {
       console.error("Failed to mark feed as unread", err);
     }
