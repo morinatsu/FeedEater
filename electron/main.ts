@@ -251,7 +251,16 @@ ipcMain.handle('refresh-feeds', async (event) => {
 
 ipcMain.on('open-external', (_event, url: string) => {
   validateSender(_event)
-  shell.openExternal(url)
+  try {
+    const parsedUrl = new URL(url)
+    if (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') {
+      shell.openExternal(url)
+    } else {
+      console.warn('Blocked opening external URL with insecure scheme:', url)
+    }
+  } catch (err) {
+    console.error('Invalid URL passed to open-external:', url, err)
+  }
 })
 
 app.whenReady().then(() => {
