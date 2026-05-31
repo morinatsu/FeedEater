@@ -90,7 +90,7 @@ import {
 import { registerFeed, syncAllFeeds } from './services/rss'
 
 // ===== IPC Handlers =====
-function validateSender(event: Electron.IpcMainInvokeEvent | Electron.IpcMainEvent) {
+export function validateSender(event: Electron.IpcMainInvokeEvent | Electron.IpcMainEvent) {
   const senderUrl = event.senderFrame?.url || event.sender?.getURL() || '';
   const isSafe = (VITE_DEV_SERVER_URL && senderUrl.startsWith(VITE_DEV_SERVER_URL)) ||
     (senderUrl === 'app://-/index.html');
