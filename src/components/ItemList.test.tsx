@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ItemList } from './ItemList';
 import * as AppContextModule from '../context/AppContext';
+import type { IElectronAPI } from '../types';
 
 vi.mock('../context/AppContext', () => ({
     useAppContext: vi.fn(),
@@ -117,7 +118,7 @@ describe('ItemList', () => {
             showFeedContextMenu: vi.fn(),
             showFolderContextMenu: vi.fn(),
             onRefreshComplete: vi.fn()
-        };
+        } as unknown as IElectronAPI;
 
         render(<ItemList />);
 

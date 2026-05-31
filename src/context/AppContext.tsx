@@ -20,7 +20,7 @@ interface AppContextType {
   markItemAsRead: (id: string) => Promise<void>;
   markItemAsUnread: (id: string) => Promise<void>;
   markFeedAsUnread: (feedId: number) => Promise<void>;
-  refreshFeeds: () => Promise<void>;
+  refreshFeeds: () => Promise<{ success: boolean; imported?: number; error?: string }>;
   addFolder: (name: string) => Promise<void>;
   deleteFolder: (id: number) => Promise<void>;
   updateFeedFolder: (feedId: number, folderId: number | null) => Promise<void>;
@@ -264,8 +264,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setError(result.error || "Failed to refresh feeds");
       }
-    } catch {
+      return result;
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to refresh feeds";
       setError("Failed to refresh feeds");
+      return { success: false, error: errorMsg };
     } finally {
       setIsLoading(false);
     }
