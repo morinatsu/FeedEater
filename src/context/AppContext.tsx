@@ -70,8 +70,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     loadFolders();
-    refreshFeeds().catch(() => {
-      // Fallback in case sync fails so we still see old items
+    refreshFeeds().then((result) => {
+      // If sync fails, it might just return {success: false, error:...}
+      // instead of throwing an error because refreshFeeds catches internal errors.
+      // But just in case, we also fallback if success is false so we see old items.
+      if (!result || !result.success) {
+        loadFeeds();
+        loadItems();
+      }
+    }).catch(() => {
+      // Fallback in case sync fails fundamentally
       loadFeeds();
       loadItems();
     });
