@@ -11,17 +11,17 @@ vi.mock('../db/repository', () => ({
 
 // Mock rss-parser
 vi.mock('rss-parser', () => {
+    const parseString = vi.fn().mockResolvedValue({
+        title: 'Mock Feed',
+        items: [
+            { title: 'Item 1', link: 'http://example.com/1', guid: '1', pubDate: '2026-01-01' },
+            { title: 'Item 2', link: 'http://example.com/2', guid: '2', pubDate: '2026-01-02' }
+        ]
+    });
+
     return {
         default: class MockParser {
-            parseString() {
-                return Promise.resolve({
-                    title: 'Mock Feed',
-                    items: [
-                        { title: 'Item 1', link: 'http://example.com/1', guid: '1', pubDate: '2026-01-01' },
-                        { title: 'Item 2', link: 'http://example.com/2', guid: '2', pubDate: '2026-01-02' }
-                    ]
-                });
-            }
+            parseString = parseString;
         }
     };
 });
@@ -76,6 +76,47 @@ describe('rss service', () => {
         expect(result).toEqual({ success: false, error: 'Error: DB Error' });
 
         consoleSpy.mockRestore();
+    });
+
+    describe('fetchAndParseFeed (via registerFeed)', () => {
+        it('should correctly escape ampersands but ignore CDATA blocks', async () => {
+            const rawXml = `<?xml version="1.0" encoding="UTF-8"?>
+            <rss version="2.0">
+                <channel>
+                    <title>Ben & Jerry's</title>
+                    <description><![CDATA[Ben & Jerry's is a brand of & ice cream]]></description>
+                    <link>http://example.com?a=1&b=2</link>
+                </channel>
+            </rss>`;
+
+            global.fetch = vi.fn().mockResolvedValue({
+                ok: true,
+                arrayBuffer: () => Promise.resolve(Buffer.from(rawXml)),
+                headers: {
+                    get: () => 'text/xml'
+                }
+            } as unknown as Response);
+
+            const { addFeed } = await import('../db/repository');
+            // @ts-expect-error - mocking addFeed
+            addFeed.mockReturnValue({ id: 100, title: 'Mock Feed', url: 'https://example.com/feed' });
+
+            await registerFeed('http://example.com/feed');
+
+            const Parser = (await import('rss-parser')).default;
+            const parserInstance = new Parser();
+            const mockParseString = parserInstance.parseString;
+
+            expect(mockParseString).toHaveBeenCalled();
+            const calledWithXml = (mockParseString as any).mock.calls[0][0];
+
+            // Should escape outside CDATA
+            expect(calledWithXml).toContain('<title>Ben &amp; Jerry\'s</title>');
+            expect(calledWithXml).toContain('<link>http://example.com?a=1&amp;b=2</link>');
+
+            // Should NOT escape inside CDATA
+            expect(calledWithXml).toContain('<description><![CDATA[Ben & Jerry\'s is a brand of & ice cream]]></description>');
+        });
     });
 
     describe('registerFeed', () => {
