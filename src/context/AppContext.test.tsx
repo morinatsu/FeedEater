@@ -6,14 +6,14 @@ describe('AppContext', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         // Setup initial success mocks
-        (window.api.getFolders as any).mockResolvedValue([{ id: 1, name: 'Folder 1' }]);
-        (window.api.getFeeds as any).mockResolvedValue([{ id: 1, title: 'Feed 1', url: 'http://test.com', folder_id: null }]);
-        (window.api.getItems as any).mockResolvedValue([
+        (window.api.getFolders as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: 1, name: 'Folder 1' }]);
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: 1, title: 'Feed 1', url: 'http://test.com', folder_id: null }]);
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
             { id: '1', title: 'Item 1', feed_id: 1, pub_date: '2023-01-02T00:00:00Z', is_read: false },
             { id: '2', title: 'Item 2', feed_id: 1, pub_date: '2023-01-01T00:00:00Z', is_read: false },
             { id: '3', title: 'Item 3', feed_id: 1, pub_date: '2023-01-03T00:00:00Z', is_read: false }
         ]);
-        (window.api.refreshFeeds as any).mockResolvedValue({ success: true });
+        (window.api.refreshFeeds as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
     });
 
     it('throws error when useAppContext is used outside AppProvider', () => {
@@ -45,7 +45,7 @@ describe('AppContext', () => {
     });
 
     it('handles initialization failures gracefully', async () => {
-        (window.api.getFolders as any).mockRejectedValue(new Error('API Error'));
+        (window.api.getFolders as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API Error'));
         // We only fail getFolders here to verify its specific error message
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
@@ -64,8 +64,8 @@ describe('AppContext', () => {
         // To reach them, we can mock `window.api.getFeeds` and `window.api.getItems` to reject,
         // and trigger them indirectly without going through `refreshFeeds`.
 
-        (window.api.getFeeds as any).mockRejectedValue(new Error('API Error'));
-        (window.api.getItems as any).mockRejectedValue(new Error('API Error'));
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API Error'));
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API Error'));
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -80,7 +80,7 @@ describe('AppContext', () => {
         });
 
         // Trigger loadFeeds via deleteFolder which succeeds
-        (window.api.deleteFolder as any).mockResolvedValue({ success: true });
+        (window.api.deleteFolder as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
         await act(async () => {
             await result.current.deleteFolder(1);
         });
@@ -93,7 +93,7 @@ describe('AppContext', () => {
     it('executes catch block on refreshFeeds complete failure', async () => {
         // To cover the .catch() on refreshFeeds().catch(), we need refreshFeeds to actually throw an error
         // *before* it resolves. We can achieve this by mocking it to reject.
-        (window.api.refreshFeeds as any).mockRejectedValue(new Error('Catastrophic failure'));
+        (window.api.refreshFeeds as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Catastrophic failure'));
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         renderHook(() => useAppContext(), { wrapper });
@@ -136,7 +136,7 @@ describe('AppContext', () => {
             expect(result.current.items).toHaveLength(3);
         });
 
-        (window.api.getItems as any).mockClear();
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockClear();
 
         act(() => {
             result.current.setSelectedItemId('1');
@@ -153,7 +153,7 @@ describe('AppContext', () => {
     });
 
     it('handles adding a feed successfully', async () => {
-        (window.api.addFeed as any).mockResolvedValue({ success: true, feed: { id: 2 } });
+        (window.api.addFeed as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true, feed: { id: 2 } });
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -162,7 +162,7 @@ describe('AppContext', () => {
             expect(result.current.feeds).toHaveLength(1);
         });
 
-        (window.api.getFeeds as any).mockClear();
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockClear();
 
         await act(async () => {
             await result.current.addFeed('http://newfeed.com');
@@ -174,7 +174,7 @@ describe('AppContext', () => {
     });
 
     it('handles adding a feed failure', async () => {
-        (window.api.addFeed as any).mockResolvedValue({ success: false, error: 'Invalid URL' });
+        (window.api.addFeed as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: false, error: 'Invalid URL' });
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -191,7 +191,7 @@ describe('AppContext', () => {
     });
 
     it('handles deleting a feed successfully', async () => {
-        (window.api.deleteFeed as any).mockResolvedValue({ success: true });
+        (window.api.deleteFeed as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -206,7 +206,7 @@ describe('AppContext', () => {
         });
         expect(result.current.selectedFeedId).toBe(1);
 
-        (window.api.getFeeds as any).mockClear();
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockClear();
 
         await act(async () => {
             await result.current.deleteFeed(1);
@@ -218,7 +218,7 @@ describe('AppContext', () => {
     });
 
     it('handles deleting a feed error response', async () => {
-        (window.api.deleteFeed as any).mockResolvedValue({ success: false, error: 'Failed' });
+        (window.api.deleteFeed as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: false, error: 'Failed' });
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -235,7 +235,7 @@ describe('AppContext', () => {
     });
 
     it('handles deleting a feed exception', async () => {
-        (window.api.deleteFeed as any).mockRejectedValue(new Error('Failed'));
+        (window.api.deleteFeed as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Failed'));
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -252,7 +252,7 @@ describe('AppContext', () => {
     });
 
     it('handles adding folder successfully', async () => {
-        (window.api.addFolder as any).mockResolvedValue({ success: true });
+        (window.api.addFolder as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -261,7 +261,7 @@ describe('AppContext', () => {
             expect(result.current.folders).toHaveLength(1);
         });
 
-        (window.api.getFolders as any).mockClear();
+        (window.api.getFolders as unknown as ReturnType<typeof vi.fn>).mockClear();
 
         await act(async () => {
             await result.current.addFolder('Folder 2');
@@ -272,7 +272,7 @@ describe('AppContext', () => {
     });
 
     it('handles adding folder failure', async () => {
-        (window.api.addFolder as any).mockResolvedValue({ success: false, error: 'Failed' });
+        (window.api.addFolder as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: false, error: 'Failed' });
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -285,7 +285,7 @@ describe('AppContext', () => {
     });
 
     it('handles adding folder exception', async () => {
-        (window.api.addFolder as any).mockRejectedValue(new Error('Failed'));
+        (window.api.addFolder as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Failed'));
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -298,7 +298,7 @@ describe('AppContext', () => {
     });
 
     it('handles deleting folder successfully', async () => {
-        (window.api.deleteFolder as any).mockResolvedValue({ success: true });
+        (window.api.deleteFolder as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -307,8 +307,8 @@ describe('AppContext', () => {
             expect(result.current.folders).toHaveLength(1);
         });
 
-        (window.api.getFolders as any).mockClear();
-        (window.api.getFeeds as any).mockClear();
+        (window.api.getFolders as unknown as ReturnType<typeof vi.fn>).mockClear();
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockClear();
 
         await act(async () => {
             await result.current.deleteFolder(1);
@@ -320,7 +320,7 @@ describe('AppContext', () => {
     });
 
     it('handles deleting folder failure', async () => {
-        (window.api.deleteFolder as any).mockResolvedValue({ success: false, error: 'Failed' });
+        (window.api.deleteFolder as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: false, error: 'Failed' });
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -333,7 +333,7 @@ describe('AppContext', () => {
     });
 
     it('handles deleting folder exception', async () => {
-        (window.api.deleteFolder as any).mockRejectedValue(new Error('Failed'));
+        (window.api.deleteFolder as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Failed'));
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -346,7 +346,7 @@ describe('AppContext', () => {
     });
 
     it('handles updating feed folder successfully', async () => {
-        (window.api.updateFeedFolder as any).mockResolvedValue({ success: true });
+        (window.api.updateFeedFolder as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -355,7 +355,7 @@ describe('AppContext', () => {
             expect(result.current.feeds).toHaveLength(1);
         });
 
-        (window.api.getFeeds as any).mockClear();
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockClear();
 
         await act(async () => {
             await result.current.updateFeedFolder(1, 2);
@@ -366,7 +366,7 @@ describe('AppContext', () => {
     });
 
     it('handles updating feed folder failure', async () => {
-        (window.api.updateFeedFolder as any).mockResolvedValue({ success: false, error: 'Failed' });
+        (window.api.updateFeedFolder as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: false, error: 'Failed' });
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -379,7 +379,7 @@ describe('AppContext', () => {
     });
 
     it('handles updating feed folder exception', async () => {
-        (window.api.updateFeedFolder as any).mockRejectedValue(new Error('Failed'));
+        (window.api.updateFeedFolder as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Failed'));
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -392,7 +392,7 @@ describe('AppContext', () => {
     });
 
     it('optimistically updates item as read', async () => {
-        (window.api.markAsRead as any).mockResolvedValue();
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue();
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -413,8 +413,8 @@ describe('AppContext', () => {
     });
 
     it('optimistically updates item as unread', async () => {
-        (window.api.markAsRead as any).mockResolvedValue();
-        (window.api.getItems as any).mockResolvedValue([
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue();
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
             { id: '1', title: 'Item 1', feed_id: 1, pub_date: '2023-01-02T00:00:00Z', is_read: true }
         ]);
 
@@ -437,8 +437,8 @@ describe('AppContext', () => {
     });
 
     it('optimistically updates feed as unread', async () => {
-        (window.api.markFeedAsRead as any).mockResolvedValue();
-        (window.api.getItems as any).mockResolvedValue([
+        (window.api.markFeedAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue();
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
             { id: '1', title: 'Item 1', feed_id: 1, pub_date: '2023-01-02T00:00:00Z', is_read: true },
             { id: '2', title: 'Item 2', feed_id: 1, pub_date: '2023-01-01T00:00:00Z', is_read: true },
             { id: '3', title: 'Item 3', feed_id: 2, pub_date: '2023-01-03T00:00:00Z', is_read: true }
@@ -465,7 +465,7 @@ describe('AppContext', () => {
     });
 
     it('handles refreshing feeds failure', async () => {
-        (window.api.refreshFeeds as any).mockResolvedValue({ success: false, error: 'Sync failed' });
+        (window.api.refreshFeeds as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: false, error: 'Sync failed' });
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -486,7 +486,7 @@ describe('AppContext', () => {
     it('handles mark item as read failure', async () => {
         const consoleSpy = vi.spyOn(console, 'error');
         consoleSpy.mockImplementation(() => {});
-        (window.api.markAsRead as any).mockRejectedValue(new Error('Failed'));
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Failed'));
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -502,7 +502,7 @@ describe('AppContext', () => {
     it('handles mark item as unread failure', async () => {
         const consoleSpy = vi.spyOn(console, 'error');
         consoleSpy.mockImplementation(() => {});
-        (window.api.markAsRead as any).mockRejectedValue(new Error('Failed'));
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Failed'));
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -518,7 +518,7 @@ describe('AppContext', () => {
     it('handles mark feed as unread failure', async () => {
         const consoleSpy = vi.spyOn(console, 'error');
         consoleSpy.mockImplementation(() => {});
-        (window.api.markFeedAsRead as any).mockRejectedValue(new Error('Failed'));
+        (window.api.markFeedAsRead as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Failed'));
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -532,7 +532,7 @@ describe('AppContext', () => {
     });
 
     it('handles refreshFeeds exception', async () => {
-        (window.api.refreshFeeds as any).mockRejectedValue(new Error('Failed'));
+        (window.api.refreshFeeds as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Failed'));
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });

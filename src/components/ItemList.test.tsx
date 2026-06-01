@@ -1,134 +1,131 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import { ItemList } from './ItemList';
-import * as AppContextModule from '../context/AppContext';
-import type { IElectronAPI } from '../types';
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { ItemList } from './ItemList'
+import * as AppContextModule from '../context/AppContext'
 
+// Mock the useAppContext hook
 vi.mock('../context/AppContext', () => ({
-    useAppContext: vi.fn(),
-}));
+    useAppContext: vi.fn()
+}))
 
 describe('ItemList', () => {
-    it('renders loading state', () => {
-        vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
+    beforeEach(() => {
+        vi.clearAllMocks()
+        // Default mock return
+        ;(AppContextModule.useAppContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+            items: [
+                { id: 1, title: 'Item 1', pub_date: '2023-01-01T00:00:00.000Z', is_read: false },
+                { id: 2, title: 'Item 2', pub_date: '2023-01-02T00:00:00.000Z', is_read: true }
+            ],
+            selectedItemId: null,
+            setSelectedItemId: vi.fn(),
+            sortOrder: 'desc',
+            setSortOrder: vi.fn(),
+            isLoading: false,
+            markItemAsUnread: vi.fn()
+        })
+    })
+
+    it('should render items', () => {
+        render(<ItemList />)
+        expect(screen.getByText('Item 1')).toBeInTheDocument()
+        expect(screen.getByText('Item 2')).toBeInTheDocument()
+    })
+
+    it('should show loading state', () => {
+        ;(AppContextModule.useAppContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
             items: [],
-            selectedItemId: null,
-            setSelectedItemId: vi.fn(),
-            sortOrder: 'desc',
-            setSortOrder: vi.fn(),
-            isLoading: true,
-        } as unknown as ReturnType<typeof AppContextModule.useAppContext>);
+            isLoading: true
+        })
+        render(<ItemList />)
+        expect(screen.getByText('Loading items...')).toBeInTheDocument()
+    })
 
-        render(<ItemList />);
-        expect(screen.getByText('Loading items...')).toBeInTheDocument();
-    });
-
-    it('renders empty state', () => {
-        vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
+    it('should show empty state', () => {
+        ;(AppContextModule.useAppContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
             items: [],
+            isLoading: false
+        })
+        render(<ItemList />)
+        expect(screen.getByText('No items found.')).toBeInTheDocument()
+    })
+
+    it('should change sort order', () => {
+        const setSortOrder = vi.fn()
+        ;(AppContextModule.useAppContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+            items: [{ id: 1, title: 'Item 1', pub_date: '2023-01-01', is_read: false }],
+            selectedItemId: null,
+            setSelectedItemId: vi.fn(),
+            sortOrder: 'desc',
+            setSortOrder,
+            isLoading: false
+        })
+
+        render(<ItemList />)
+        const select = screen.getByRole('combobox')
+        fireEvent.change(select, { target: { value: 'asc' } })
+        expect(setSortOrder).toHaveBeenCalledWith('asc')
+    })
+
+    it('should handle item click', () => {
+        const setSelectedItemId = vi.fn()
+        ;(AppContextModule.useAppContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+            items: [{ id: 1, title: 'Item 1', pub_date: '2023-01-01', is_read: false }],
+            selectedItemId: null,
+            setSelectedItemId,
+            sortOrder: 'desc',
+            setSortOrder: vi.fn(),
+            isLoading: false
+        })
+
+        render(<ItemList />)
+        fireEvent.click(screen.getByText('Item 1'))
+        expect(setSelectedItemId).toHaveBeenCalledWith(1)
+    })
+
+    it('should handle item context menu', async () => {
+        const markItemAsUnread = vi.fn()
+        ;(AppContextModule.useAppContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+            items: [{ id: 1, title: 'Item 1', pub_date: '2023-01-01', is_read: true }],
             selectedItemId: null,
             setSelectedItemId: vi.fn(),
             sortOrder: 'desc',
             setSortOrder: vi.fn(),
             isLoading: false,
-        } as unknown as ReturnType<typeof AppContextModule.useAppContext>);
-
-        render(<ItemList />);
-        expect(screen.getByText('No items found.')).toBeInTheDocument();
-    });
-
-    it('renders items and handles click', () => {
-        const setSelectedItemIdMock = vi.fn();
-        const mockItems = [
-            { id: '1', title: 'Item 1', pub_date: '2026-03-01T12:00:00Z', is_read: false, feed_id: 1, link: 'url', content: '' },
-            { id: '2', title: 'Item 2', pub_date: '2026-03-02T12:00:00Z', is_read: true, feed_id: 1, link: 'url', content: '' },
-        ];
-
-        vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
-            items: mockItems,
-            selectedItemId: null,
-            setSelectedItemId: setSelectedItemIdMock,
-            sortOrder: 'desc',
-            setSortOrder: vi.fn(),
-            isLoading: false,
-        } as unknown as ReturnType<typeof AppContextModule.useAppContext>);
-
-        render(<ItemList />);
-
-        // Items should be rendered
-        expect(screen.getByText('Item 1')).toBeInTheDocument();
-        expect(screen.getByText('Item 2')).toBeInTheDocument();
-
-        // Click an item
-        screen.getByText('Item 1').click();
-        expect(setSelectedItemIdMock).toHaveBeenCalledWith('1');
-    });
-
-    it('handles sorting', () => {
-        const setSortOrderMock = vi.fn();
-        vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
-            items: [{ id: '1', title: 'Item 1', pub_date: '2026-03-01T12:00:00Z', is_read: false, feed_id: 1, link: 'url', content: '' }],
-            selectedItemId: null,
-            setSelectedItemId: vi.fn(),
-            sortOrder: 'desc',
-            setSortOrder: setSortOrderMock,
-            isLoading: false,
-            markItemAsUnread: vi.fn(),
-        } as unknown as ReturnType<typeof AppContextModule.useAppContext>);
-
-        render(<ItemList />);
-
-        const select = screen.getByRole('combobox');
-        // change to asc
-        fireEvent.change(select, { target: { value: 'asc' } });
-        expect(setSortOrderMock).toHaveBeenCalledWith('asc');
-    });
-
-    it('handles context menu to mark item as unread', async () => {
-        const markItemAsUnreadMock = vi.fn();
-        vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
-            items: [{ id: '1', title: 'Item 1', pub_date: '2026-03-01T12:00:00Z', is_read: true, feed_id: 1, link: 'url', content: '' }],
-            selectedItemId: null,
-            setSelectedItemId: vi.fn(),
-            sortOrder: 'desc',
-            setSortOrder: vi.fn(),
-            isLoading: false,
-            markItemAsUnread: markItemAsUnreadMock,
-        } as unknown as ReturnType<typeof AppContextModule.useAppContext>);
+            markItemAsUnread
+        })
 
         // Mock window.api
         window.api = {
-            showItemContextMenu: vi.fn().mockResolvedValue('unread'),
-            openExternal: vi.fn(),
-            registerFeed: vi.fn(),
-            getFeeds: vi.fn(),
-            getFolders: vi.fn(),
-            getItems: vi.fn(),
-            markItemRead: vi.fn(),
-            markFeedRead: vi.fn(),
-            syncAllFeeds: vi.fn(),
-            onUpdateProgress: vi.fn(),
-            onUpdateAvailable: vi.fn(),
-            onUpdateDownloaded: vi.fn(),
-            onError: vi.fn(),
-            addFolder: vi.fn(),
-            deleteFolder: vi.fn(),
-            deleteFeed: vi.fn(),
-            updateFeedFolder: vi.fn(),
-            showFeedContextMenu: vi.fn(),
-            showFolderContextMenu: vi.fn(),
-            onRefreshComplete: vi.fn()
-        } as unknown as IElectronAPI;
+            ...window.api,
+            showItemContextMenu: vi.fn().mockResolvedValue('unread')
+        }
 
-        render(<ItemList />);
+        render(<ItemList />)
+        const item = screen.getByText('Item 1').closest('.item-card')
 
-        const item = screen.getByText('Item 1');
-        fireEvent.contextMenu(item);
+        fireEvent.contextMenu(item!)
 
-        // Wait for the context menu promise to resolve
-        await vi.waitFor(() => {
-            expect(window.api.showItemContextMenu).toHaveBeenCalled();
-            expect(markItemAsUnreadMock).toHaveBeenCalledWith('1');
-        });
-    });
-});
+        await waitFor(() => {
+            expect(markItemAsUnread).toHaveBeenCalledWith(1)
+        })
+    })
+
+    it('should scroll into view when selected item changes', () => {
+        const scrollIntoViewMock = vi.fn()
+        window.HTMLElement.prototype.scrollIntoView = scrollIntoViewMock
+
+        ;(AppContextModule.useAppContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+            items: [{ id: 1, title: 'Item 1', pub_date: '2023-01-01', is_read: false }],
+            selectedItemId: 1,
+            setSelectedItemId: vi.fn(),
+            sortOrder: 'desc',
+            setSortOrder: vi.fn(),
+            isLoading: false
+        })
+
+        render(<ItemList />)
+
+        expect(scrollIntoViewMock).toHaveBeenCalled()
+    })
+})

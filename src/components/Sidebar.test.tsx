@@ -217,7 +217,7 @@ describe('Sidebar', () => {
 
         window.api = {
             showFeedContextMenu: vi.fn().mockResolvedValue({ action: 'unread' }),
-        } as any;
+        } as unknown as typeof window.api;
 
         render(<Sidebar />);
 
@@ -247,7 +247,7 @@ describe('Sidebar', () => {
 
         window.api = {
             showFeedContextMenu: vi.fn().mockResolvedValue({ action: 'delete' }),
-        } as any;
+        } as unknown as typeof window.api;
 
         window.confirm = vi.fn().mockReturnValue(true);
 
@@ -279,7 +279,7 @@ describe('Sidebar', () => {
 
         window.api = {
             showFeedContextMenu: vi.fn().mockResolvedValue({ action: 'move', folderId: 2 }),
-        } as any;
+        } as unknown as typeof window.api;
 
         render(<Sidebar />);
 
@@ -309,7 +309,7 @@ describe('Sidebar', () => {
 
         window.api = {
             showFolderContextMenu: vi.fn().mockResolvedValue('delete'),
-        } as any;
+        } as unknown as typeof window.api;
 
         window.confirm = vi.fn().mockReturnValue(true);
 
