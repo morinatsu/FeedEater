@@ -81,10 +81,22 @@ describe('rss service', () => {
     describe('registerFeed', () => {
         it('should register a new feed successfully and enforce HTTPS', async () => {
             const { addFeed } = await import('../db/repository');
-            // @ts-expect-error
+            // @ts-expect-error - mocking addFeed
             addFeed.mockReturnValue({ id: 99, title: 'Mock Feed', url: 'https://example.com/feed' });
 
             const result = await registerFeed('http://example.com/feed');
+
+            expect(result.success).toBe(true);
+            expect(result.feed).toBeDefined();
+            expect(addFeed).toHaveBeenCalledWith('Mock Feed', 'https://example.com/feed');
+        });
+
+        it('should enforce HTTPS case-insensitively', async () => {
+            const { addFeed } = await import('../db/repository');
+            // @ts-expect-error - mocking addFeed
+            addFeed.mockReturnValue({ id: 99, title: 'Mock Feed', url: 'https://example.com/feed' });
+
+            const result = await registerFeed('HTTP://example.com/feed');
 
             expect(result.success).toBe(true);
             expect(result.feed).toBeDefined();

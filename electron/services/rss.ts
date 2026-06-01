@@ -53,10 +53,7 @@ async function fetchAndParseFeed(url: string) {
 export const registerFeed = async (url: string) => {
     try {
         // Enforce HTTPS
-        let secureUrl = url;
-        if (secureUrl.startsWith('http://')) {
-            secureUrl = secureUrl.replace('http://', 'https://');
-        }
+        const secureUrl = url.replace(/^http:\/\//i, 'https://');
 
         const feed = await fetchAndParseFeed(secureUrl);
         // Add to database
