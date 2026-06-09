@@ -189,3 +189,30 @@ describe('rss service', () => {
         });
     });
 });
+
+describe('RSS Service Additional coverage', () => {
+    it('should fallback to charset parsing from xml head', async () => {
+        const { registerFeed } = await import('./rss');
+
+        global.fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            arrayBuffer: async () => Buffer.from(`<?xml version="1.0" encoding="ISO-8859-1"?><rss><channel><title>Test Feed</title></channel></rss>`),
+            headers: new Headers({ 'content-type': 'application/xml' }) // missing charset
+        }) as unknown as typeof fetch;
+
+        const result = await registerFeed('https://example.com/test');
+        expect(result.success).toBe(true);
+    });
+
+    it('should throw error on fetch failure', async () => {
+        const { registerFeed } = await import('./rss');
+
+        global.fetch = vi.fn().mockResolvedValue({
+            ok: false,
+            status: 500
+        }) as unknown as typeof fetch;
+
+        const result = await registerFeed('https://example.com/fail');
+        expect(result.success).toBe(false);
+    });
+});

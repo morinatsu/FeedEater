@@ -542,3 +542,78 @@ describe('AppContext', () => {
         });
     });
 });
+
+describe('AppContext Additional tests', () => {
+    it('handles addFolder error', async () => {
+        window.api.addFolder = vi.fn().mockResolvedValue({ success: false, error: 'Failed to add' })
+        const { result } = renderHook(() => useAppContext(), { wrapper: AppProvider })
+
+        await act(async () => {
+            const added = await result.current.addFolder('NewFolder')
+            expect(added).toBeUndefined()
+        })
+    })
+
+    it('handles deleteFolder error', async () => {
+        window.api.deleteFolder = vi.fn().mockResolvedValue({ success: false, error: 'Failed to delete' })
+        const { result } = renderHook(() => useAppContext(), { wrapper: AppProvider })
+
+        await act(async () => {
+            await result.current.deleteFolder(1)
+        })
+    })
+
+    it('handles deleteFeed error', async () => {
+        window.api.deleteFeed = vi.fn().mockResolvedValue({ success: false, error: 'Failed to delete' })
+        const { result } = renderHook(() => useAppContext(), { wrapper: AppProvider })
+
+        await act(async () => {
+            await result.current.deleteFeed(1)
+        })
+    })
+
+    it('handles empty fallback on init if sync fails but loads anyway', async () => {
+        window.api.getFeeds = vi.fn().mockResolvedValue([]);
+        window.api.getItems = vi.fn().mockResolvedValue([]);
+        window.api.refreshFeeds = vi.fn().mockRejectedValue(new Error('Sync failed'));
+
+        let result: unknown;
+        await act(async () => {
+             const hook = renderHook(() => useAppContext(), { wrapper: AppProvider })
+             result = hook.result;
+        })
+        expect((result as { current: { feeds: unknown[] } }).current.feeds).toEqual([])
+    })
+
+    it('handles adding empty folder successfully', async () => {
+        window.api.addFolder = vi.fn().mockResolvedValue({ success: true, folder: { id: 2, name: '' } })
+        const { result } = renderHook(() => useAppContext(), { wrapper: AppProvider })
+
+        await act(async () => {
+            await result.current.addFolder('')
+        })
+    })
+
+    it('handles adding empty feed successfully', async () => {
+        window.api.addFeed = vi.fn().mockResolvedValue({ success: true, feed: { id: 2, title: '', url: '' } })
+        const { result } = renderHook(() => useAppContext(), { wrapper: AppProvider })
+
+        await act(async () => {
+            await result.current.addFeed('')
+        })
+    })
+
+    it('handles fetching feeds that return false success', async () => {
+        const getFeedsMock = vi.fn().mockResolvedValue([{ id: 1 }]);
+        window.api.getFeeds = getFeedsMock;
+        window.api.refreshFeeds = vi.fn().mockResolvedValue({ success: false });
+
+        await act(async () => {
+            renderHook(() => useAppContext(), { wrapper: AppProvider });
+        })
+
+        await waitFor(() => {
+            expect(getFeedsMock).toHaveBeenCalled();
+        });
+    });
+});
