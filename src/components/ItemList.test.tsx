@@ -129,3 +129,50 @@ describe('ItemList', () => {
         expect(scrollIntoViewMock).toHaveBeenCalled()
     })
 })
+
+describe('ItemList Additional coverage', () => {
+    it('should not mark item as unread if action is not unread', async () => {
+        const markItemAsUnread = vi.fn()
+        ;(AppContextModule.useAppContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+            items: [{ id: 1, title: 'Item 1', pub_date: '2023-01-01', is_read: true }],
+            selectedItemId: null,
+            setSelectedItemId: vi.fn(),
+            sortOrder: 'desc',
+            setSortOrder: vi.fn(),
+            isLoading: false,
+            markItemAsUnread
+        })
+
+        // Mock window.api
+        Object.assign(window.api, {
+            showItemContextMenu: vi.fn().mockResolvedValue('other')
+        })
+
+        render(<ItemList />)
+        const item = screen.getByText('Item 1').closest('.item-card')
+
+        fireEvent.contextMenu(item!)
+
+        await waitFor(() => {
+            expect(markItemAsUnread).not.toHaveBeenCalled()
+        })
+    })
+
+    it('should do nothing if selectedItemId is present but element not found', () => {
+        const scrollIntoViewMock = vi.fn()
+        window.HTMLElement.prototype.scrollIntoView = scrollIntoViewMock
+
+        ;(AppContextModule.useAppContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+            items: [{ id: 2, title: 'Item 2', pub_date: '2023-01-01', is_read: false }],
+            selectedItemId: 1, // ID not in items list
+            setSelectedItemId: vi.fn(),
+            sortOrder: 'desc',
+            setSortOrder: vi.fn(),
+            isLoading: false
+        })
+
+        render(<ItemList />)
+
+        expect(scrollIntoViewMock).not.toHaveBeenCalled()
+    })
+});

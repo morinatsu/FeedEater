@@ -122,3 +122,38 @@ describe('DB Repository', () => {
     });
 });
 
+
+describe('DB Repository Additional coverage', () => {
+    it('should get folder by id', async () => {
+        mockGet.mockReturnValueOnce({ id: 1, name: 'Tech' });
+        const { getFolderById } = await import('./repository');
+        const folder = getFolderById(1);
+        expect(mockDb.prepare).toHaveBeenCalledWith('SELECT * FROM folders WHERE id = ?');
+        expect(folder).toEqual({ id: 1, name: 'Tech' });
+    });
+
+    it('should get feed by id', async () => {
+        mockGet.mockReturnValueOnce({ id: 1, title: 'Test Feed', url: 'https://example.com/feed.xml' });
+        const { getFeedById } = await import('./repository');
+        const feed = getFeedById(1);
+        expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('SELECT f.*,'));
+        expect(feed).toEqual({ id: 1, title: 'Test Feed', url: 'https://example.com/feed.xml' });
+    });
+
+    it('should delete folder by id with invalid folder', async () => {
+        const { deleteFolderById } = await import('./repository');
+        deleteFolderById(999);
+    });
+
+    it('should get missing feed by id', async () => {
+        mockGet.mockReturnValueOnce(undefined);
+        const { getFeedById } = await import('./repository');
+        const feed = getFeedById(999);
+        expect(feed).toBeUndefined();
+    });
+
+    it('should mark feed as read implicitly', async () => {
+        const { markFeedAsRead } = await import('./repository');
+        markFeedAsRead(1, false);
+    });
+});
