@@ -151,10 +151,37 @@ describe('main', () => {
 
         const setWindowOpenHandler = mockWindowObj.webContents.setWindowOpenHandler
 
+        // Reset mock call history before testing
+        vi.mocked(shell.openExternal).mockClear()
+
         if (setWindowOpenHandler.mock.calls.length > 0) {
             const handler = setWindowOpenHandler.mock.calls[0][0]
             expect(handler({ url: 'http://example.com' })).toEqual({ action: 'deny' })
+            expect(shell.openExternal).toHaveBeenCalledWith('http://example.com')
+
+            vi.mocked(shell.openExternal).mockClear()
             expect(handler({ url: 'file:///local/path' })).toEqual({ action: 'deny' })
+            expect(shell.openExternal).not.toHaveBeenCalled()
+
+            vi.mocked(shell.openExternal).mockClear()
+            expect(handler({ url: 'javascript:alert(1)' })).toEqual({ action: 'deny' })
+            expect(shell.openExternal).not.toHaveBeenCalled()
+        }
+
+        // Also test will-navigate
+        const willNavigateHandler = mockWindowObj.webContents.on.mock.calls.find(call => call[0] === 'will-navigate')
+        if (willNavigateHandler) {
+            const cb = willNavigateHandler[1]
+            const e = { preventDefault: vi.fn() }
+
+            vi.mocked(shell.openExternal).mockClear()
+            cb(e, 'https://example.com')
+            expect(e.preventDefault).toHaveBeenCalled()
+            expect(shell.openExternal).toHaveBeenCalledWith('https://example.com')
+
+            vi.mocked(shell.openExternal).mockClear()
+            cb(e, 'file:///etc/passwd')
+            expect(shell.openExternal).not.toHaveBeenCalled()
         }
 
         // Use imports to silence unused variable errors if we just need coverage
