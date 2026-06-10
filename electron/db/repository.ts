@@ -1,29 +1,5 @@
 import { getDB } from './index';
-
-export interface Folder {
-    id: number;
-    name: string;
-}
-
-export interface Feed {
-    id: number;
-    title: string;
-    url: string;
-    last_fetched: string | null;
-    error_msg?: string | null;
-    folder_id?: number | null;
-    unread_count?: number;
-}
-
-export interface RSSItem {
-    id: string; // guid or link
-    feed_id: number;
-    title: string;
-    link: string;
-    content: string;
-    pub_date: string;
-    is_read: boolean;
-}
+import type { Folder, Feed, RSSItem } from '../../src/types';
 
 // ==== Folders ====
 
