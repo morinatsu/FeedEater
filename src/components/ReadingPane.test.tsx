@@ -164,4 +164,32 @@ describe('ReadingPane', () => {
 
     consoleErrorSpy.mockRestore();
   });
+
+  it('handles invalid target URL format gracefully', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    (AppContextModule.useAppContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultContext,
+      items: [{
+        ...defaultContext.items[0],
+        id: 4,
+        link: 'https://example.com/article', // Valid base URL
+        content: '<a href="http://::1">Malformed Target Link</a>'
+      }],
+      selectedItemId: 4,
+    });
+
+    render(<ReadingPane />);
+    const invalidLink = screen.getByText('Malformed Target Link');
+    fireEvent.click(invalidLink);
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "Failed to parse URL:",
+        "http://::1",
+        expect.any(Error)
+    );
+    expect(window.api.openExternal).not.toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
 });
