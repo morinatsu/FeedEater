@@ -306,4 +306,38 @@ describe('main', () => {
         cb()
         expect(MockBrowserWindow.getAllWindows).toHaveBeenCalled()
     })
+
+    it('should handle custom app:// protocol and prevent path traversal', async () => {
+        const { app, protocol, net } = await import('electron')
+        await import('./main')
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const whenReadyCb = (app.whenReady as any).mock.results[0]?.value;
+        if (whenReadyCb) {
+             await whenReadyCb;
+        }
+
+        // Find the protocol.handle call for 'app'
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const handleMock = protocol.handle as any
+        const appProtocolHandlerCall = handleMock.mock.calls.find((call: any) => call[0] === 'app')
+        expect(appProtocolHandlerCall).toBeDefined()
+
+        const handler = appProtocolHandlerCall[1]
+
+        // 1. Valid path access
+        const validRequest = { url: 'app://-/index.html' }
+        vi.mocked(net.fetch).mockClear()
+        await handler(validRequest)
+        expect(net.fetch).toHaveBeenCalledTimes(1)
+
+        // 2. Path traversal attack
+        const maliciousRequest = { url: 'app://-/..%2f..%2f..%2f..%2fetc%2fpasswd' }
+        vi.mocked(net.fetch).mockClear()
+        const response = await handler(maliciousRequest)
+
+        expect(net.fetch).not.toHaveBeenCalled()
+        expect(response).toBeInstanceOf(Response)
+        expect(response.status).toBe(403)
+    })
 })

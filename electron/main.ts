@@ -286,8 +286,28 @@ app.whenReady().then(() => {
   protocol.handle('app', (request) => {
     const url = new URL(request.url)
     // Map app://-/path/to/file to local path
-    const filePath = path.join(process.env.DIST as string, url.pathname)
-    return net.fetch(pathToFileURL(filePath).href)
+    const distPath = path.resolve(process.env.DIST as string)
+
+    // We use path.join here to safely append pathname without it acting as an absolute path
+    // which might happen with path.resolve if pathname starts with '/'
+    let requestPath = decodeURIComponent(url.pathname)
+    // Remove the custom protocol host separator if it exists (e.g. app://-)
+    if (requestPath.startsWith('/-/')) {
+      requestPath = requestPath.slice(2)
+    }
+
+    const joinedPath = path.join(distPath, requestPath)
+    const resolvedFilePath = path.resolve(joinedPath)
+
+    if (
+      resolvedFilePath !== distPath &&
+      !resolvedFilePath.startsWith(distPath + path.sep)
+    ) {
+      console.error(`Path traversal blocked: attempt to access ${resolvedFilePath} outside of ${distPath}`)
+      return new Response('Forbidden', { status: 403 })
+    }
+
+    return net.fetch(pathToFileURL(resolvedFilePath).href)
   })
 
   initDB()
