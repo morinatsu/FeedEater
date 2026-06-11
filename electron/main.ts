@@ -30,7 +30,16 @@ function createWindow() {
 
   // Set reading pane external links to open in default browser
   win.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    try {
+      const parsedUrl = new URL(details.url)
+      if (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') {
+        shell.openExternal(details.url)
+      } else {
+        console.warn('Blocked opening external URL with insecure scheme:', details.url)
+      }
+    } catch (err) {
+      console.error('Invalid URL passed to setWindowOpenHandler:', details.url, err)
+    }
     return { action: 'deny' }
   })
 
@@ -38,7 +47,16 @@ function createWindow() {
     // If the URL is not our local dev server or index.html, open it externally
     if (url !== VITE_DEV_SERVER_URL && !url.includes('index.html')) {
       e.preventDefault()
-      shell.openExternal(url)
+      try {
+        const parsedUrl = new URL(url)
+        if (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') {
+          shell.openExternal(url)
+        } else {
+          console.warn('Blocked navigating to external URL with insecure scheme:', url)
+        }
+      } catch (err) {
+        console.error('Invalid URL passed to will-navigate:', url, err)
+      }
     }
   })
 
