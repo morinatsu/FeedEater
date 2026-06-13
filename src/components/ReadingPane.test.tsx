@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ReadingPane } from './ReadingPane';
 import * as AppContextModule from '../context/AppContext';
 
@@ -191,5 +191,100 @@ describe('ReadingPane', () => {
     expect(window.api.openExternal).not.toHaveBeenCalled();
 
     consoleErrorSpy.mockRestore();
+  });
+
+  it('handles item context menu in ReadingPane', async () => {
+    const mockMarkItemAsUnread = vi.fn();
+    (AppContextModule.useAppContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultContext,
+      selectedItemId: 1,
+      markItemAsUnread: mockMarkItemAsUnread,
+    });
+
+    window.api = {
+      ...window.api,
+      showItemContextMenu: vi.fn().mockResolvedValue('unread'),
+    };
+
+    render(<ReadingPane />);
+    const container = screen.getByRole('heading', { name: 'Test Article' }).closest('.reading-pane');
+    expect(container).toBeInTheDocument();
+
+    fireEvent.contextMenu(container!);
+
+    await waitFor(() => {
+      expect(mockMarkItemAsUnread).toHaveBeenCalledWith(1);
+    });
+  });
+
+  it('does not mark as unread if menu action is not unread', async () => {
+    const mockMarkItemAsUnread = vi.fn();
+    (AppContextModule.useAppContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultContext,
+      selectedItemId: 1,
+      markItemAsUnread: mockMarkItemAsUnread,
+    });
+
+    window.api = {
+      ...window.api,
+      showItemContextMenu: vi.fn().mockResolvedValue('cancel'),
+    };
+
+    render(<ReadingPane />);
+    const container = screen.getByRole('heading', { name: 'Test Article' }).closest('.reading-pane');
+
+    fireEvent.contextMenu(container!);
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(mockMarkItemAsUnread).not.toHaveBeenCalled();
+  });
+
+  it('does not re-mark as read if item becomes unread while remaining selected', () => {
+    const mockMarkItemAsRead = vi.fn();
+    
+    // First render with unread item (should trigger markItemAsRead)
+    const context1 = {
+      ...defaultContext,
+      items: [
+        {
+          id: 2,
+          feed_id: 101,
+          title: 'Unread Article',
+          link: 'https://example.com/unread',
+          pub_date: '2023-05-02T12:00:00Z',
+          content: '<p>Unread content</p>',
+          is_read: false,
+        }
+      ],
+      selectedItemId: 2,
+      markItemAsRead: mockMarkItemAsRead,
+    };
+    
+    (AppContextModule.useAppContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue(context1);
+    
+    const { rerender } = render(<ReadingPane />);
+    expect(mockMarkItemAsRead).toHaveBeenCalledTimes(1);
+    expect(mockMarkItemAsRead).toHaveBeenCalledWith(2);
+    
+    // Reset mock
+    mockMarkItemAsRead.mockClear();
+
+    // Re-render with same item but it is now "unread" (e.g. user toggled unread)
+    // and it remains selected.
+    const context2 = {
+      ...context1,
+      items: [
+        {
+          ...context1.items[0],
+          is_read: false, // Remains unread, mimicking unread toggle
+        }
+      ],
+    };
+    (AppContextModule.useAppContext as unknown as ReturnType<typeof vi.fn>).mockReturnValue(context2);
+    
+    rerender(<ReadingPane />);
+    
+    // It should not call markItemAsRead again because it was already opened
+    expect(mockMarkItemAsRead).not.toHaveBeenCalled();
   });
 });

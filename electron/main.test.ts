@@ -318,9 +318,8 @@ describe('main', () => {
         }
 
         // Find the protocol.handle call for 'app'
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const handleMock = protocol.handle as any
-        const appProtocolHandlerCall = handleMock.mock.calls.find((call: any) => call[0] === 'app')
+        const handleMock = vi.mocked(protocol.handle)
+        const appProtocolHandlerCall = handleMock.mock.calls.find((call) => call[0] === 'app')
         expect(appProtocolHandlerCall).toBeDefined()
 
         const handler = appProtocolHandlerCall[1]

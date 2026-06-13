@@ -1,17 +1,24 @@
 import { useAppContext } from "../context/AppContext";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import DOMPurify from "dompurify";
 import EmptyItemIcon from '../assets/Empty_Item.png';
 
 export const ReadingPane = () => {
-  const { items, feeds, selectedItemId, markItemAsRead } = useAppContext();
+  const { items, feeds, selectedItemId, markItemAsRead, markItemAsUnread } = useAppContext();
   const item = items.find((i) => i.id === selectedItemId);
   const feed = item ? feeds.find((f) => f.id === item.feed_id) : null;
 
+  const lastOpenedId = useRef<string | null>(null);
+
   useEffect(() => {
-    // Mark as read when opened
-    if (item && !item.is_read) {
+    // Mark as read when opened (only when switching to a different unread item)
+    if (item && !item.is_read && lastOpenedId.current !== item.id) {
       markItemAsRead(item.id);
+    }
+    if (item) {
+      lastOpenedId.current = item.id;
+    } else {
+      lastOpenedId.current = null;
     }
   }, [item, markItemAsRead]);
 
@@ -46,7 +53,16 @@ export const ReadingPane = () => {
   };
 
   return (
-    <div className="reading-pane">
+    <div
+      className="reading-pane"
+      onContextMenu={async (e) => {
+        e.preventDefault();
+        const action = await window.api.showItemContextMenu();
+        if (action === 'unread') {
+          markItemAsUnread(item.id);
+        }
+      }}
+    >
       <header className="article-header">
         <h1>{item.title}</h1>
         <div className="article-meta">

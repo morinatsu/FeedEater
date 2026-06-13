@@ -392,7 +392,7 @@ describe('AppContext', () => {
     });
 
     it('optimistically updates item as read', async () => {
-        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue();
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
         const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
         const { result } = renderHook(() => useAppContext(), { wrapper });
@@ -413,7 +413,7 @@ describe('AppContext', () => {
     });
 
     it('optimistically updates item as unread', async () => {
-        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue();
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
         (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
             { id: '1', title: 'Item 1', feed_id: 1, pub_date: '2023-01-02T00:00:00Z', is_read: true }
         ]);
@@ -437,7 +437,7 @@ describe('AppContext', () => {
     });
 
     it('optimistically updates feed as unread', async () => {
-        (window.api.markFeedAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue();
+        (window.api.markFeedAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
         (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
             { id: '1', title: 'Item 1', feed_id: 1, pub_date: '2023-01-02T00:00:00Z', is_read: true },
             { id: '2', title: 'Item 2', feed_id: 1, pub_date: '2023-01-01T00:00:00Z', is_read: true },

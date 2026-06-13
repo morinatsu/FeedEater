@@ -99,7 +99,7 @@ describe('rss service', () => {
 
             const { addFeed } = await import('../db/repository');
             // @ts-expect-error - mocking addFeed
-            addFeed.mockReturnValue({ id: 100, title: 'Mock Feed', url: 'https://example.com/feed' });
+            vi.mocked(addFeed).mockReturnValue({ id: 100, title: 'Mock Feed', url: 'https://example.com/feed' });
 
             await registerFeed('http://example.com/feed');
 
@@ -108,7 +108,7 @@ describe('rss service', () => {
             const mockParseString = parserInstance.parseString;
 
             expect(mockParseString).toHaveBeenCalled();
-            const calledWithXml = (mockParseString as any).mock.calls[0][0];
+            const calledWithXml = vi.mocked(mockParseString).mock.calls[0][0];
 
             // Should escape outside CDATA
             expect(calledWithXml).toContain('<title>Ben &amp; Jerry\'s</title>');

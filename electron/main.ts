@@ -218,18 +218,34 @@ ipcMain.handle('show-feed-context-menu', (event) => {
   validateSender(event)
   const folders = getFolders();
   return new Promise((resolve) => {
+    let clicked = false
     const template: Electron.MenuItemConstructorOptions[] = [
-      { label: '未読にする', click: () => resolve({ action: 'unread' }) },
+      { 
+        label: '未読にする', 
+        click: () => {
+          clicked = true
+          resolve({ action: 'unread' })
+        } 
+      },
       { type: 'separator' }
     ]
 
     if (folders.length > 0) {
       const submenu: Electron.MenuItemConstructorOptions[] = folders.map(f => ({
         label: f.name,
-        click: () => resolve({ action: 'move', folderId: f.id })
+        click: () => {
+          clicked = true
+          resolve({ action: 'move', folderId: f.id })
+        }
       }))
       submenu.push({ type: 'separator' })
-      submenu.push({ label: 'フォルダから出す', click: () => resolve({ action: 'move', folderId: null }) })
+      submenu.push({ 
+        label: 'フォルダから出す', 
+        click: () => {
+          clicked = true
+          resolve({ action: 'move', folderId: null })
+        } 
+      })
 
       template.push({
         label: 'フォルダに移動',
@@ -238,12 +254,22 @@ ipcMain.handle('show-feed-context-menu', (event) => {
       template.push({ type: 'separator' })
     }
 
-    template.push({ label: '削除', click: () => resolve({ action: 'delete' }) })
+    template.push({ 
+      label: '削除', 
+      click: () => {
+        clicked = true
+        resolve({ action: 'delete' })
+      } 
+    })
 
     const menu = Menu.buildFromTemplate(template)
     menu.popup()
     menu.once('menu-will-close', () => {
-      setTimeout(() => resolve({ action: 'cancel' }), 100)
+      setTimeout(() => {
+        if (!clicked) {
+          resolve({ action: 'cancel' })
+        }
+      }, 100)
     })
   })
 })
@@ -251,13 +277,24 @@ ipcMain.handle('show-feed-context-menu', (event) => {
 ipcMain.handle('show-item-context-menu', (event) => {
   validateSender(event)
   return new Promise((resolve) => {
+    let clicked = false
     const template = [
-      { label: '未読にする', click: () => resolve('unread') },
+      { 
+        label: '未読にする', 
+        click: () => {
+          clicked = true
+          resolve('unread')
+        } 
+      },
     ]
     const menu = Menu.buildFromTemplate(template)
     menu.popup()
     menu.once('menu-will-close', () => {
-      setTimeout(() => resolve('cancel'), 100)
+      setTimeout(() => {
+        if (!clicked) {
+          resolve('cancel')
+        }
+      }, 100)
     })
   })
 })
