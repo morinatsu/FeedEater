@@ -40,7 +40,7 @@ async function fetchAndParseFeed(url: string) {
         xmlString = iconv.decode(buffer, charset);
     }
 
-    // Fix unescaped ampersands which frequently break XML validation in RSS/RDF feeds,
+    // Escape unescaped ampersands which frequently break XML validation in RSS/RDF feeds,
     // but ignore those inside CDATA blocks.
     const cleanedContent = xmlString.replace(/<!\[CDATA\[[\s\S]*?\]\]>|&(?!#?[a-z0-9]+;)/gi, (match) => {
         if (match.toLowerCase().startsWith('<![cdata[')) {
