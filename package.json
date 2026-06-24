@@ -49,7 +49,7 @@
     "vite": "^8.0.16",
     "vite-plugin-electron": "^0.29.0",
     "vite-plugin-electron-renderer": "^0.14.6",
-    "vitest": "^4.0.18"
+    "vitest": "^4.1.9"
   },
   "build": {
     "appId": "com.feedeater.app",

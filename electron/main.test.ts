@@ -111,11 +111,27 @@ vi.mock('./services/rss', () => ({
 const mockRepository = {
     getFolders: vi.fn(),
     addFolder: vi.fn(),
-    deleteFolder: vi.fn(),
+    deleteFolderById: vi.fn(),
+    getFeeds: vi.fn(),
+    getItemsByFeed: vi.fn(),
+    getAllItems: vi.fn(),
+    markItemAsRead: vi.fn(),
+    deleteFeedById: vi.fn(),
+    markFeedAsRead: vi.fn(),
+    updateFeedFolder: vi.fn()
 }
 
-vi.mock('./db/repository', () => ({
-    Repository: vi.fn(() => mockRepository)
+vi.mock('./db/repository', () => mockRepository)
+
+const { mockMenu } = vi.hoisted(() => ({
+    mockMenu: {
+        popup: vi.fn(),
+        once: vi.fn((event, cb) => {
+            if (event === 'menu-will-close') {
+                cb()
+            }
+        })
+    }
 }))
 
 vi.mock('./menu', () => ({
@@ -124,7 +140,8 @@ vi.mock('./menu', () => ({
 vi.mock('electron-updater', () => ({
     autoUpdater: {
         on: vi.fn(),
-        checkForUpdatesAndNotify: vi.fn()
+        checkForUpdatesAndNotify: vi.fn(),
+        quitAndInstall: vi.fn()
     }
 }))
 vi.mock('./db/index', () => ({
@@ -201,6 +218,12 @@ describe('main', () => {
 
         await new Promise(resolve => setTimeout(resolve, 0))
 
+        // Helper to create a fake event with a safe URL
+        const safeEvent = {
+            senderFrame: { url: 'http://localhost:3000' }
+        };
+
+        const { shell } = await import('electron')
         // Execute some IPC handlers to increase coverage in main.ts
         const calls = mockIpcMainHandle.mock.calls
         for (const call of calls) {
@@ -210,68 +233,207 @@ describe('main', () => {
                 if (channel === 'get-version') {
                     expect(handler()).toBe('1.0.0')
                 } else if (channel === 'dialog:showErrorBox') {
-                    handler({}, 'title', 'content')
+                    handler(safeEvent, 'title', 'content')
                     expect(dialog.showErrorBox).toHaveBeenCalledWith('title', 'content')
                 } else if (channel === 'dialog:showMessageBox') {
-                    await handler({}, { type: 'info', message: 'msg' })
+                    await handler(safeEvent, { type: 'info', message: 'msg' })
                     expect(dialog.showMessageBox).toHaveBeenCalled()
                 } else if (channel === 'get-folders') {
-                    await handler({})
+                    await handler(safeEvent)
                     expect(mockRepository.getFolders).toHaveBeenCalled()
                 } else if (channel === 'add-folder') {
-                    await handler({}, 'NewFolder')
+                    await handler(safeEvent, 'NewFolder')
                     expect(mockRepository.addFolder).toHaveBeenCalledWith('NewFolder')
+                    mockRepository.addFolder.mockImplementationOnce(() => { throw new Error('DB error') })
+                    const res = await handler(safeEvent, 'NewFolder')
+                    expect(res.success).toBe(false)
                 } else if (channel === 'delete-folder') {
-                    await handler({}, 1)
-                    expect(mockRepository.deleteFolder).toHaveBeenCalledWith(1)
+                    await handler(safeEvent, 1)
+                    expect(mockRepository.deleteFolderById).toHaveBeenCalledWith(1)
+                    mockRepository.deleteFolderById.mockImplementationOnce(() => { throw new Error('DB error') })
+                    const res = await handler(safeEvent, 1)
+                    expect(res.success).toBe(false)
+                } else if (channel === 'update-feed-folder') {
+                    await handler(safeEvent, 1, 2)
+                    expect(mockRepository.updateFeedFolder).toHaveBeenCalledWith(1, 2)
+                    mockRepository.updateFeedFolder.mockImplementationOnce(() => { throw new Error('DB error') })
+                    const res = await handler(safeEvent, 1, 2)
+                    expect(res.success).toBe(false)
                 } else if (channel === 'show-folder-context-menu') {
                     const mockPopup = vi.fn()
-                    Menu.buildFromTemplate = vi.fn().mockReturnValue({ popup: mockPopup })
-                    await handler({}, 1)
+                    Menu.buildFromTemplate = vi.fn((template) => {
+                         const item = template.find((t: any) => t.label === '削除')
+                         if (item && item.click) item.click()
+                         return { popup: mockPopup, once: vi.fn((e, cb) => cb()) }
+                    })
+                    await handler(safeEvent, 1)
                     expect(Menu.buildFromTemplate).toHaveBeenCalled()
                     expect(mockPopup).toHaveBeenCalled()
+
+                    // Cancel path
+                    Menu.buildFromTemplate = vi.fn(() => ({ popup: mockPopup, once: vi.fn((e, cb) => {
+                         cb()
+                         vi.runAllTimers()
+                    }) }))
+                    vi.useFakeTimers()
+                    const p = handler(safeEvent, 1)
+                    vi.runAllTimers()
+                    await p
+                    vi.useRealTimers()
                 } else if (channel === 'show-feed-context-menu') {
+                    mockRepository.getFolders.mockReturnValueOnce([{ id: 1, name: 'Folder 1' }])
                     const mockPopup = vi.fn()
-                    Menu.buildFromTemplate = vi.fn().mockReturnValue({ popup: mockPopup })
-                    await handler({}, 1)
+                    Menu.buildFromTemplate = vi.fn((template) => {
+                         const item = template.find((t: any) => t.label === '削除')
+                         if (item && item.click) item.click()
+
+                         const unreadItem = template.find((t: any) => t.label === '未読にする')
+                         if (unreadItem && unreadItem.click) unreadItem.click()
+
+                         const moveMenu = template.find((t: any) => t.label === 'フォルダに移動')
+                         if (moveMenu && moveMenu.submenu) {
+                             const folderItem = moveMenu.submenu.find((t: any) => t.label === 'Folder 1')
+                             if (folderItem && folderItem.click) folderItem.click()
+
+                             const outItem = moveMenu.submenu.find((t: any) => t.label === 'フォルダから出す')
+                             if (outItem && outItem.click) outItem.click()
+                         }
+
+                         return { popup: mockPopup, once: vi.fn((e, cb) => cb()) }
+                    })
+                    await handler(safeEvent, 1)
                     expect(Menu.buildFromTemplate).toHaveBeenCalled()
                     expect(mockPopup).toHaveBeenCalled()
+
+                    // Cancel path
+                    mockRepository.getFolders.mockReturnValueOnce([])
+                    Menu.buildFromTemplate = vi.fn(() => ({ popup: mockPopup, once: vi.fn((e, cb) => {
+                         cb()
+                         vi.runAllTimers()
+                    }) }))
+                    vi.useFakeTimers()
+                    const p = handler(safeEvent, 1)
+                    vi.runAllTimers()
+                    await p
+                    vi.useRealTimers()
                 } else if (channel === 'show-item-context-menu') {
                      const mockPopup = vi.fn()
-                     Menu.buildFromTemplate = vi.fn().mockReturnValue({ popup: mockPopup })
-                     await handler({})
+                     Menu.buildFromTemplate = vi.fn((template) => {
+                         const item = template.find((t: any) => t.label === '未読にする')
+                         if (item && item.click) item.click()
+                         return { popup: mockPopup, once: vi.fn((e, cb) => cb()) }
+                     })
+                     await handler(safeEvent)
                      expect(Menu.buildFromTemplate).toHaveBeenCalled()
                      expect(mockPopup).toHaveBeenCalled()
+
+                     // Test the cancel path (when clicked is false)
+                     Menu.buildFromTemplate = vi.fn(() => ({ popup: mockPopup, once: vi.fn((e, cb) => {
+                         // trigger callback
+                         cb()
+                         vi.runAllTimers() // needed for setTimeout
+                     }) }))
+                     vi.useFakeTimers()
+                     const p = handler(safeEvent)
+                     vi.runAllTimers()
+                     await p
+                     vi.useRealTimers()
                 } else if (channel === 'get-feeds') {
-                    await handler({})
-                    expect(mockRssService.getFeeds).toHaveBeenCalled()
+                    await handler(safeEvent)
+                    expect(mockRepository.getFeeds).toHaveBeenCalled()
                 } else if (channel === 'get-items') {
-                    await handler({})
-                    expect(mockRssService.getItems).toHaveBeenCalled()
+                    await handler(safeEvent)
+                    expect(mockRepository.getAllItems).toHaveBeenCalled()
+                    await handler(safeEvent, 1)
+                    expect(mockRepository.getItemsByFeed).toHaveBeenCalledWith(1)
                 } else if (channel === 'add-feed') {
-                    await handler({}, 'http://example.com/rss')
-                    expect(mockRssService.addFeed).toHaveBeenCalledWith('http://example.com/rss')
+                    await handler(safeEvent, 'http://example.com/rss')
+                    expect(mockRssService.registerFeed).toHaveBeenCalledWith('http://example.com/rss')
                 } else if (channel === 'delete-feed') {
-                    await handler({}, 1)
-                    expect(mockRssService.deleteFeed).toHaveBeenCalledWith(1)
+                    await handler(safeEvent, 1)
+                    expect(mockRepository.deleteFeedById).toHaveBeenCalledWith(1)
+                    mockRepository.deleteFeedById.mockImplementationOnce(() => { throw new Error('DB error') })
+                    const res = await handler(safeEvent, 1)
+                    expect(res.success).toBe(false)
                 } else if (channel === 'mark-as-read') {
-                    await handler({}, 1)
-                    expect(mockRssService.markAsRead).toHaveBeenCalledWith(1)
+                    await handler(safeEvent, '1')
+                    expect(mockRepository.markItemAsRead).toHaveBeenCalledWith('1', true)
                 } else if (channel === 'mark-feed-as-read') {
-                    await handler({}, 1)
-                    expect(mockRssService.markFeedAsRead).toHaveBeenCalledWith(1)
+                    await handler(safeEvent, 1)
+                    expect(mockRepository.markFeedAsRead).toHaveBeenCalledWith(1, true)
                 } else if (channel === 'refresh-feeds') {
-                    await handler({})
-                    expect(mockRssService.refreshFeeds).toHaveBeenCalled()
-                } else if (channel === 'update-feed-folder') {
-                    await handler({}, 1, 2)
-                    expect(mockRssService.updateFeedFolder).toHaveBeenCalledWith(1, 2)
+                    await handler(safeEvent)
+                    expect(mockRssService.syncAllFeeds).toHaveBeenCalled()
                 }
             } catch (error) {
                 // Ignore any async errors for now just wanting coverage
                 console.log(error)
             }
         }
+
+        // Execute ipcMain.on handlers
+        const onCalls = mockIpcMainOn.mock.calls
+        for (const call of onCalls) {
+            const channel = call[0]
+            const handler = call[1]
+            if (channel === 'open-external') {
+                vi.mocked(shell.openExternal).mockClear()
+                handler(safeEvent, 'https://example.com')
+                expect(shell.openExternal).toHaveBeenCalledWith('https://example.com')
+
+                vi.mocked(shell.openExternal).mockClear()
+                handler(safeEvent, 'file:///local/path')
+                expect(shell.openExternal).not.toHaveBeenCalled()
+
+                vi.mocked(shell.openExternal).mockClear()
+                handler(safeEvent, 'not-a-valid-url')
+                expect(shell.openExternal).not.toHaveBeenCalled()
+            }
+        }
+    })
+
+    it('should configure session and autoUpdater', async () => {
+        const { app, session } = await import('electron')
+        const { autoUpdater } = await import('electron-updater')
+        await import('./main')
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const whenReadyCb = (app.whenReady as any).mock.results[0]?.value;
+        if (whenReadyCb) {
+             await whenReadyCb;
+        }
+
+        const setPermissionRequestHandlerCall = vi.mocked(session.defaultSession.setPermissionRequestHandler).mock.calls[0]
+        expect(setPermissionRequestHandlerCall).toBeDefined()
+        const permissionHandlerCb = setPermissionRequestHandlerCall[0]
+        const callbackMock = vi.fn()
+        permissionHandlerCb({}, 'camera', callbackMock)
+        expect(callbackMock).toHaveBeenCalledWith(false)
+
+        const onBeforeRequestCall = vi.mocked(session.defaultSession.webRequest.onBeforeRequest).mock.calls[0]
+        expect(onBeforeRequestCall).toBeDefined()
+        const onBeforeRequestCb = onBeforeRequestCall[0]
+
+        const httpCallback = vi.fn()
+        onBeforeRequestCb({ url: 'http://example.com' }, httpCallback)
+        expect(httpCallback).toHaveBeenCalledWith({ redirectURL: 'https://example.com' })
+
+        const localCallback = vi.fn()
+        onBeforeRequestCb({ url: 'http://localhost:3000' }, localCallback)
+        expect(localCallback).toHaveBeenCalledWith({})
+
+        const autoUpdaterOnCalls = vi.mocked(autoUpdater.on).mock.calls
+        const updateAvailableCall = autoUpdaterOnCalls.find(call => call[0] === 'update-available')
+        expect(updateAvailableCall).toBeDefined()
+        updateAvailableCall![1]() // execute callback
+
+        const updateDownloadedCall = autoUpdaterOnCalls.find(call => call[0] === 'update-downloaded')
+        expect(updateDownloadedCall).toBeDefined()
+
+        vi.useFakeTimers()
+        updateDownloadedCall![1]() // execute callback
+        vi.runAllTimers()
+        vi.useRealTimers()
     })
 
     it('handles window-all-closed properly', async () => {
