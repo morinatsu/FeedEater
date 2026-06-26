@@ -379,7 +379,6 @@ app.whenReady().then(() => {
   })
 
   autoUpdater.on('update-downloaded', () => {
-    console.log('Update downloaded. Restarting...')
     win?.webContents.send('main-process-message', 'Update downloaded. Restarting to install...')
     setTimeout(() => {
       autoUpdater.quitAndInstall()
