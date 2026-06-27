@@ -244,21 +244,39 @@ describe('main', () => {
                 } else if (channel === 'add-folder') {
                     await handler(safeEvent, 'NewFolder')
                     expect(mockRepository.addFolder).toHaveBeenCalledWith('NewFolder')
-                    mockRepository.addFolder.mockImplementationOnce(() => { throw new Error('DB error') })
+
+                    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+                    const dbError = new Error('DB error')
+                    mockRepository.addFolder.mockImplementationOnce(() => { throw dbError })
                     const res = await handler(safeEvent, 'NewFolder')
                     expect(res.success).toBe(false)
+                    expect(res.error).toBe(String(dbError))
+                    expect(consoleSpy).toHaveBeenCalledWith('Failed to add folder:', dbError)
+                    consoleSpy.mockRestore()
                 } else if (channel === 'delete-folder') {
                     await handler(safeEvent, 1)
                     expect(mockRepository.deleteFolderById).toHaveBeenCalledWith(1)
-                    mockRepository.deleteFolderById.mockImplementationOnce(() => { throw new Error('DB error') })
+
+                    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+                    const dbError = new Error('DB error')
+                    mockRepository.deleteFolderById.mockImplementationOnce(() => { throw dbError })
                     const res = await handler(safeEvent, 1)
                     expect(res.success).toBe(false)
+                    expect(res.error).toBe(String(dbError))
+                    expect(consoleSpy).toHaveBeenCalledWith('Failed to delete folder:', dbError)
+                    consoleSpy.mockRestore()
                 } else if (channel === 'update-feed-folder') {
                     await handler(safeEvent, 1, 2)
                     expect(mockRepository.updateFeedFolder).toHaveBeenCalledWith(1, 2)
-                    mockRepository.updateFeedFolder.mockImplementationOnce(() => { throw new Error('DB error') })
+
+                    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+                    const dbError = new Error('DB error')
+                    mockRepository.updateFeedFolder.mockImplementationOnce(() => { throw dbError })
                     const res = await handler(safeEvent, 1, 2)
                     expect(res.success).toBe(false)
+                    expect(res.error).toBe(String(dbError))
+                    expect(consoleSpy).toHaveBeenCalledWith('Failed to update feed folder:', dbError)
+                    consoleSpy.mockRestore()
                 } else if (channel === 'show-folder-context-menu') {
                     const mockPopup = vi.fn()
                     Menu.buildFromTemplate = vi.fn((template) => {
@@ -352,9 +370,15 @@ describe('main', () => {
                 } else if (channel === 'delete-feed') {
                     await handler(safeEvent, 1)
                     expect(mockRepository.deleteFeedById).toHaveBeenCalledWith(1)
-                    mockRepository.deleteFeedById.mockImplementationOnce(() => { throw new Error('DB error') })
+
+                    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+                    const dbError = new Error('DB error')
+                    mockRepository.deleteFeedById.mockImplementationOnce(() => { throw dbError })
                     const res = await handler(safeEvent, 1)
                     expect(res.success).toBe(false)
+                    expect(res.error).toBe(String(dbError))
+                    expect(consoleSpy).toHaveBeenCalledWith('Failed to delete feed:', dbError)
+                    consoleSpy.mockRestore()
                 } else if (channel === 'mark-as-read') {
                     await handler(safeEvent, '1')
                     expect(mockRepository.markItemAsRead).toHaveBeenCalledWith('1', true)
