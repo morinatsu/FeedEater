@@ -532,17 +532,4 @@ describe('main', () => {
         expect(response).toBeInstanceOf(Response)
         expect(response.status).toBe(403)
     })
-
-    it('should test update-feed-folder error path explicitly', async () => {
-        await import('./main')
-        const call = mockIpcMainHandle.mock.calls.find(c => c[0] === 'update-feed-folder')
-        expect(call).toBeDefined()
-        const handler = call![1]
-        const safeEvent = { senderFrame: { url: 'app://-/index.html' } } as any
-        const dbError = new Error('Explicit DB error')
-        mockRepository.updateFeedFolder.mockImplementationOnce(() => { throw dbError })
-        const res = await handler(safeEvent, 1, 2)
-        expect(res.success).toBe(false)
-        expect(res.error).toBe(String(dbError))
-    })
 })
