@@ -540,9 +540,14 @@ describe('main', () => {
         const handler = call![1]
         const safeEvent = { senderFrame: { url: 'app://-/index.html' } } as any
         const dbError = new Error('Explicit DB error')
+
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
         mockRepository.updateFeedFolder.mockImplementationOnce(() => { throw dbError })
         const res = await handler(safeEvent, 1, 2)
+
         expect(res.success).toBe(false)
         expect(res.error).toBe(String(dbError))
+        expect(consoleSpy).toHaveBeenCalledWith('Failed to update feed folder:', dbError)
+        consoleSpy.mockRestore()
     })
 })
