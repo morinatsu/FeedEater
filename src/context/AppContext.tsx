@@ -70,19 +70,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     loadFolders();
-    refreshFeeds().then((result) => {
-      // If sync fails, it might just return {success: false, error:...}
-      // instead of throwing an error because refreshFeeds catches internal errors.
-      // But just in case, we also fallback if success is false so we see old items.
-      if (!result || !result.success) {
-        loadFeeds();
-        loadItems();
-      }
-    }).catch(() => {
-      // Fallback in case sync fails fundamentally
-      loadFeeds();
-      loadItems();
-    });
+    loadFeeds();
+    loadItems();
+    refreshFeeds();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
