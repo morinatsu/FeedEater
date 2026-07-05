@@ -67,7 +67,7 @@ export const registerFeed = async (url: string) => {
         const newFeed = addFeed(title, secureUrl);
 
         // Immediately fetch items for the newly added feed
-        await syncFeed(newFeed.id, url);
+        await syncFeed(newFeed.id, secureUrl);
 
         return { success: true, feed: newFeed };
     } catch (error) {
