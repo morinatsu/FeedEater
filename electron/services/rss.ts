@@ -1,6 +1,6 @@
 import Parser from 'rss-parser';
 import iconv from 'iconv-lite';
-import { addFeed, insertItem, updateFeedError } from '../db/repository';
+import { addFeed, insertItem, updateFeedError, getFeeds } from '../db/repository';
 
 const parser = new Parser({
     customFields: {
@@ -121,7 +121,6 @@ export const syncFeed = async (feedId: number, url: string) => {
  */
 export const syncAllFeeds = async () => {
     try {
-        const { getFeeds } = await import('../db/repository');
         const feeds = getFeeds();
         let totalImported = 0;
 
