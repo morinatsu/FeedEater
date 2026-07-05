@@ -378,7 +378,7 @@ app.whenReady().then(() => {
   })
 
   // Configure automatic updates
-  autoUpdater.logger = console // Using console if electron-log is not installed
+  autoUpdater.logger = console
   autoUpdater.checkForUpdatesAndNotify()
 
   autoUpdater.on('update-available', () => {
