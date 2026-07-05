@@ -361,12 +361,20 @@ app.whenReady().then(() => {
   // This intercepts any outgoing HTTP requests and upgrades them to HTTPS
   session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
     // Only upgrade http:// requests, skip local dev server, file://, and ws:// for now
-    if (details.url.startsWith('http://') && !details.url.includes('localhost') && !details.url.includes('127.0.0.1')) {
-      const secureUrl = details.url.replace(/^http:\/\//i, 'https://')
-      callback({ redirectURL: secureUrl })
-    } else {
-      callback({})
+    if (details.url.startsWith('http://')) {
+      try {
+        const parsedUrl = new URL(details.url)
+        if (parsedUrl.hostname !== 'localhost' && parsedUrl.hostname !== '127.0.0.1') {
+          const secureUrl = details.url.replace(/^http:\/\//i, 'https://')
+          callback({ redirectURL: secureUrl })
+          return
+        }
+      } catch (err) {
+        console.error('Invalid URL in webRequest.onBeforeRequest:', details.url, err)
+      }
     }
+
+    callback({})
   })
 
   // Configure automatic updates

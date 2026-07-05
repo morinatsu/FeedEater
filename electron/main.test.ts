@@ -453,6 +453,17 @@ describe('main', () => {
         onBeforeRequestCb({ url: 'http://localhost:3000' }, localCallback)
         expect(localCallback).toHaveBeenCalledWith({})
 
+        const maliciousCallback = vi.fn()
+        onBeforeRequestCb({ url: 'http://example.com/?redirect=localhost' }, maliciousCallback)
+        expect(maliciousCallback).toHaveBeenCalledWith({ redirectURL: 'https://example.com/?redirect=localhost' })
+
+        const invalidUrlCallback = vi.fn()
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        onBeforeRequestCb({ url: 'http://not-a-valid-url:port-is-bad' }, invalidUrlCallback)
+        expect(invalidUrlCallback).toHaveBeenCalledWith({}) // Falls back to not upgrading and logging
+        expect(consoleErrorSpy).toHaveBeenCalled()
+        consoleErrorSpy.mockRestore()
+
         const autoUpdaterOnCalls = vi.mocked(autoUpdater.on).mock.calls
         const updateAvailableCall = autoUpdaterOnCalls.find(call => call[0] === 'update-available')
         expect(updateAvailableCall).toBeDefined()
