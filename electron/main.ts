@@ -23,11 +23,6 @@ function createWindow() {
     },
   })
 
-  // Test active push message to Renderer-process.
-  win.webContents.on('did-finish-load', () => {
-    win?.webContents.send('main-process-message', (new Date).toLocaleString())
-  })
-
   // Set reading pane external links to open in default browser
   win.webContents.setWindowOpenHandler((details) => {
     try {
