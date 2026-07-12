@@ -107,7 +107,6 @@ export const syncFeed = async (feedId: number, url: string) => {
         // Clear any previous error on success
         updateFeedError(feedId, null);
 
-        console.log(`Synced ${importedCount} items for feed ID ${feedId}`);
         return { success: true, imported: importedCount };
     } catch (error) {
         console.error(`Failed to sync feed ID ${feedId}:`, error);
