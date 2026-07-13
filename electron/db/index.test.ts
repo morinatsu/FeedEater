@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import fs from 'fs';
-import { app } from 'electron';
 
 // Mock fs and electron before importing module to avoid unmocked behavior
 vi.mock('fs', () => ({
