@@ -26,10 +26,45 @@ describe('menu', () => {
         vi.clearAllMocks()
     })
 
-    it('should setup application menu', () => {
+    it('should setup application menu on non-macOS', () => {
+        const originalPlatform = process.platform
+        Object.defineProperty(process, 'platform', {
+            value: 'win32'
+        })
+
         setupApplicationMenu()
-        expect(Menu.buildFromTemplate).toHaveBeenCalled()
-        expect(Menu.setApplicationMenu).toHaveBeenCalled()
+
+        const template = (Menu.buildFromTemplate as ReturnType<typeof vi.fn>).mock.calls[0][0]
+
+        expect(template[0].label).toBe('File')
+        expect(template[0].submenu[0].role).toBe('quit')
+        expect(template[3].label).toBe('Window')
+        expect(template[3].submenu[2].role).toBe('close')
+
+        Object.defineProperty(process, 'platform', {
+            value: originalPlatform
+        })
+    })
+
+    it('should setup application menu on macOS', () => {
+        const originalPlatform = process.platform
+        Object.defineProperty(process, 'platform', {
+            value: 'darwin'
+        })
+
+        setupApplicationMenu()
+
+        const template = (Menu.buildFromTemplate as ReturnType<typeof vi.fn>).mock.calls[0][0]
+
+        expect(template[0].label).toBe('TestApp')
+        expect(template[1].label).toBe('File')
+        expect(template[1].submenu[0].role).toBe('close')
+        expect(template[4].label).toBe('Window')
+        expect(template[4].submenu[3].role).toBe('front')
+
+        Object.defineProperty(process, 'platform', {
+            value: originalPlatform
+        })
     })
 
     it('should show about dialog', async () => {
@@ -39,8 +74,7 @@ describe('menu', () => {
         setupApplicationMenu()
 
         const template = (Menu.buildFromTemplate as ReturnType<typeof vi.fn>).mock.calls[0][0]
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const helpMenu = template.find((item: any) => item.role === 'help')
+        const helpMenu = template.find((item: { role: string; submenu: { click: () => Promise<void> }[] }) => item.role === 'help')
         const aboutItem = helpMenu.submenu[0]
 
         await aboutItem.click()
@@ -64,8 +98,7 @@ describe('menu', () => {
         setupApplicationMenu()
 
         const template = (Menu.buildFromTemplate as ReturnType<typeof vi.fn>).mock.calls[0][0]
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const helpMenu = template.find((item: any) => item.role === 'help')
+        const helpMenu = template.find((item: { role: string; submenu: { click: () => Promise<void> }[] }) => item.role === 'help')
         const aboutItem = helpMenu.submenu[0]
 
         await aboutItem.click()

@@ -130,17 +130,6 @@ const mockRepository = {
 
 vi.mock('./db/repository', () => mockRepository)
 
-const { mockMenu } = vi.hoisted(() => ({
-    mockMenu: {
-        popup: vi.fn(),
-        once: vi.fn((event, cb) => {
-            if (event === 'menu-will-close') {
-                cb()
-            }
-        })
-    }
-}))
-
 vi.mock('./menu', () => ({
     setupApplicationMenu: vi.fn()
 }))
@@ -287,9 +276,9 @@ describe('main', () => {
                 } else if (channel === 'show-folder-context-menu') {
                     const mockPopup = vi.fn()
                     Menu.buildFromTemplate = vi.fn((template) => {
-                         const item = template.find((t: any) => t.label === '削除')
+                         const item = template.find((t: { label: string; click?: () => void }) => t.label === '削除')
                          if (item && item.click) item.click()
-                         return { popup: mockPopup, once: vi.fn((e, cb) => cb()) }
+                         return { popup: mockPopup, once: vi.fn((e, cb) => cb()) } as unknown as Electron.Menu
                     })
                     await handler(safeEvent, 1)
                     expect(Menu.buildFromTemplate).toHaveBeenCalled()
@@ -309,22 +298,22 @@ describe('main', () => {
                     mockRepository.getFolders.mockReturnValueOnce([{ id: 1, name: 'Folder 1' }])
                     const mockPopup = vi.fn()
                     Menu.buildFromTemplate = vi.fn((template) => {
-                         const item = template.find((t: any) => t.label === '削除')
+                         const item = template.find((t: { label: string; click?: () => void }) => t.label === '削除')
                          if (item && item.click) item.click()
 
-                         const unreadItem = template.find((t: any) => t.label === '未読にする')
+                         const unreadItem = template.find((t: { label: string; click?: () => void }) => t.label === '未読にする')
                          if (unreadItem && unreadItem.click) unreadItem.click()
 
-                         const moveMenu = template.find((t: any) => t.label === 'フォルダに移動')
+                         const moveMenu = template.find((t: { label: string; submenu?: { label: string; click?: () => void }[] }) => t.label === 'フォルダに移動')
                          if (moveMenu && moveMenu.submenu) {
-                             const folderItem = moveMenu.submenu.find((t: any) => t.label === 'Folder 1')
+                             const folderItem = moveMenu.submenu.find((t: { label: string; click?: () => void }) => t.label === 'Folder 1')
                              if (folderItem && folderItem.click) folderItem.click()
 
-                             const outItem = moveMenu.submenu.find((t: any) => t.label === 'フォルダから出す')
+                             const outItem = moveMenu.submenu.find((t: { label: string; click?: () => void }) => t.label === 'フォルダから出す')
                              if (outItem && outItem.click) outItem.click()
                          }
 
-                         return { popup: mockPopup, once: vi.fn((e, cb) => cb()) }
+                         return { popup: mockPopup, once: vi.fn((e, cb) => cb()) } as unknown as Electron.Menu
                     })
                     await handler(safeEvent, 1)
                     expect(Menu.buildFromTemplate).toHaveBeenCalled()
@@ -344,9 +333,9 @@ describe('main', () => {
                 } else if (channel === 'show-item-context-menu') {
                      const mockPopup = vi.fn()
                      Menu.buildFromTemplate = vi.fn((template) => {
-                         const item = template.find((t: any) => t.label === '未読にする')
+                         const item = template.find((t: { label: string; click?: () => void }) => t.label === '未読にする')
                          if (item && item.click) item.click()
-                         return { popup: mockPopup, once: vi.fn((e, cb) => cb()) }
+                         return { popup: mockPopup, once: vi.fn((e, cb) => cb()) } as unknown as Electron.Menu
                      })
                      await handler(safeEvent)
                      expect(Menu.buildFromTemplate).toHaveBeenCalled()
@@ -549,7 +538,7 @@ describe('main', () => {
         const call = mockIpcMainHandle.mock.calls.find(c => c[0] === 'update-feed-folder')
         expect(call).toBeDefined()
         const handler = call![1]
-        const safeEvent = { senderFrame: { url: 'app://-/index.html' } } as any
+        const safeEvent = { senderFrame: { url: 'app://-/index.html' } } as unknown as Electron.IpcMainInvokeEvent
         const dbError = new Error('Explicit DB error')
 
         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
