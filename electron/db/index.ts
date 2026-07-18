@@ -74,14 +74,14 @@ const createSchema = () => {
     try {
         db.exec("ALTER TABLE feeds ADD COLUMN error_msg TEXT;");
     } catch {
-        // error_msg column already exists
+        console.warn("error_msg column already exists");
     }
 
     // Add folder_id column to feeds table if it doesn't exist (for existing DBs)
     try {
         db.exec("ALTER TABLE feeds ADD COLUMN folder_id INTEGER REFERENCES folders(id);");
     } catch {
-        // folder_id column already exists
+        console.warn("folder_id column already exists");
     }
 
     // Index for quick querying of unread status

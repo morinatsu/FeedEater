@@ -33,9 +33,12 @@ vi.mock('better-sqlite3', () => {
 import { initDB, getDB, closeDB } from './index';
 
 describe('Database Initialization', () => {
+    let warnSpy: any;
+
     beforeEach(() => {
         vi.clearAllMocks();
         closeDB(); // Ensure DB is closed/cleared before each test
+        warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     });
 
     it('should initialize DB successfully', () => {
@@ -54,6 +57,9 @@ describe('Database Initialization', () => {
 
         expect(() => initDB('/custom/path.sqlite')).not.toThrow();
 
+        // Assert that the warning was logged
+        expect(warnSpy).toHaveBeenCalledWith('error_msg column already exists');
+
         // Assert that the next statements in createSchema were still executed
         expect(mockExec).toHaveBeenCalledWith('ALTER TABLE feeds ADD COLUMN folder_id INTEGER REFERENCES folders(id);');
         expect(mockExec).toHaveBeenCalledWith('CREATE INDEX IF NOT EXISTS idx_items_is_read ON items(is_read);');
@@ -67,6 +73,9 @@ describe('Database Initialization', () => {
         });
 
         expect(() => initDB('/custom/path.sqlite')).not.toThrow();
+
+        // Assert that the warning was logged
+        expect(warnSpy).toHaveBeenCalledWith('folder_id column already exists');
 
         // Assert that the next statements in createSchema were still executed
         expect(mockExec).toHaveBeenCalledWith('CREATE INDEX IF NOT EXISTS idx_items_is_read ON items(is_read);');
