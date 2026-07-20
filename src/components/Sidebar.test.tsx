@@ -125,6 +125,62 @@ describe('Sidebar', () => {
         });
     });
 
+    it('handles adding empty folder name', async () => {
+        const addFolderMock = vi.fn();
+        vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
+            feeds: [],
+            folders: [],
+            selectedFeedId: null,
+            setSelectedFeedId: vi.fn(),
+            addFeed: vi.fn(),
+            deleteFeed: vi.fn(),
+            refreshFeeds: vi.fn(),
+            isLoading: false,
+            markFeedAsUnread: vi.fn(),
+            addFolder: addFolderMock,
+            deleteFolder: vi.fn(),
+            updateFeedFolder: vi.fn()
+        } as unknown as ReturnType<typeof AppContextModule.useAppContext>);
+
+        render(<Sidebar />);
+
+        fireEvent.click(screen.getByTitle('Add Folder'));
+        const form = screen.getByPlaceholderText('Folder Name').closest('form');
+        if (form) fireEvent.submit(form);
+
+        await waitFor(() => {
+            expect(addFolderMock).not.toHaveBeenCalled();
+        });
+    });
+
+    it('handles adding empty feed url', async () => {
+        const addFeedMock = vi.fn();
+        vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
+            feeds: [],
+            folders: [],
+            selectedFeedId: null,
+            setSelectedFeedId: vi.fn(),
+            addFeed: addFeedMock,
+            deleteFeed: vi.fn(),
+            refreshFeeds: vi.fn(),
+            isLoading: false,
+            markFeedAsUnread: vi.fn(),
+            addFolder: vi.fn(),
+            deleteFolder: vi.fn(),
+            updateFeedFolder: vi.fn()
+        } as unknown as ReturnType<typeof AppContextModule.useAppContext>);
+
+        render(<Sidebar />);
+
+        fireEvent.click(screen.getByTitle('Add Feed'));
+        const form = screen.getByPlaceholderText('https://example.com/rss').closest('form');
+        if (form) fireEvent.submit(form);
+
+        await waitFor(() => {
+            expect(addFeedMock).not.toHaveBeenCalled();
+        });
+    });
+
     it('handles toggling folder expansion', () => {
         vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
             feeds: [{ id: 1, title: 'Feed 1', url: 'https://example.com/1', last_fetched: null, folder_id: 1 }],
@@ -260,6 +316,36 @@ describe('Sidebar', () => {
         });
     });
 
+    it('handles feed context menu (move to root folder)', async () => {
+        const updateFeedFolderMock = vi.fn();
+        vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
+            feeds: [{ id: 1, title: 'Feed 1', url: 'https://example.com/1', last_fetched: null }],
+            folders: [],
+            selectedFeedId: null,
+            setSelectedFeedId: vi.fn(),
+            addFeed: vi.fn(),
+            deleteFeed: vi.fn(),
+            refreshFeeds: vi.fn(),
+            isLoading: false,
+            markFeedAsUnread: vi.fn(),
+            addFolder: vi.fn(),
+            deleteFolder: vi.fn(),
+            updateFeedFolder: updateFeedFolderMock
+        } as unknown as ReturnType<typeof AppContextModule.useAppContext>);
+
+        window.api = {
+            showFeedContextMenu: vi.fn().mockResolvedValue({ action: 'move', folderId: null }),
+        } as unknown as typeof window.api;
+
+        render(<Sidebar />);
+
+        fireEvent.contextMenu(screen.getByText('Feed 1'));
+
+        await waitFor(() => {
+            expect(updateFeedFolderMock).toHaveBeenCalledWith(1, null);
+        });
+    });
+
     it('handles feed context menu (move)', async () => {
         const updateFeedFolderMock = vi.fn();
         vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
@@ -324,6 +410,73 @@ describe('Sidebar', () => {
 });
 
 describe('Sidebar Additional coverage', () => {
+    it('renders unread indicator on unassigned feed', () => {
+        vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
+            feeds: [
+                { id: 1, title: 'Feed 1', url: 'https://example.com/1', last_fetched: null, unread_count: 5 }
+            ],
+            folders: [],
+            selectedFeedId: null,
+            setSelectedFeedId: vi.fn(),
+            addFeed: vi.fn(),
+            deleteFeed: vi.fn(),
+            refreshFeeds: vi.fn(),
+            isLoading: false,
+            markFeedAsUnread: vi.fn(),
+            addFolder: vi.fn(),
+            deleteFolder: vi.fn(),
+            updateFeedFolder: vi.fn()
+        } as unknown as ReturnType<typeof AppContextModule.useAppContext>);
+
+        render(<Sidebar />);
+        const feedLi = screen.getByText('Feed 1').closest('li');
+        expect(feedLi).toHaveClass('unread');
+    });
+
+    it('renders with loading state', () => {
+        vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
+            feeds: [],
+            folders: [],
+            selectedFeedId: null,
+            setSelectedFeedId: vi.fn(),
+            addFeed: vi.fn(),
+            deleteFeed: vi.fn(),
+            refreshFeeds: vi.fn(),
+            isLoading: true,
+            markFeedAsUnread: vi.fn(),
+            addFolder: vi.fn(),
+            deleteFolder: vi.fn(),
+            updateFeedFolder: vi.fn()
+        } as unknown as ReturnType<typeof AppContextModule.useAppContext>);
+
+        render(<Sidebar />);
+        expect(screen.getByText('⏳')).toBeInTheDocument();
+        expect(screen.getByTitle('Refresh All Feeds')).toBeDisabled();
+    });
+
+    it('handles selected state on feed', () => {
+        vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
+            feeds: [
+                { id: 1, title: 'Feed 1', url: 'https://example.com/1', last_fetched: null, unread_count: 0 }
+            ],
+            folders: [],
+            selectedFeedId: 1,
+            setSelectedFeedId: vi.fn(),
+            addFeed: vi.fn(),
+            deleteFeed: vi.fn(),
+            refreshFeeds: vi.fn(),
+            isLoading: false,
+            markFeedAsUnread: vi.fn(),
+            addFolder: vi.fn(),
+            deleteFolder: vi.fn(),
+            updateFeedFolder: vi.fn()
+        } as unknown as ReturnType<typeof AppContextModule.useAppContext>);
+
+        render(<Sidebar />);
+        const feedLi = screen.getByText('Feed 1').closest('li');
+        expect(feedLi).toHaveClass('selected');
+    });
+
     it('renders empty folder', () => {
         vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
             feeds: [],
@@ -402,6 +555,100 @@ describe('Sidebar Additional coverage', () => {
 
         await waitFor(() => {
             expect(updateFeedFolderMock).not.toHaveBeenCalled();
+        });
+    });
+
+    it('handles context menu for feed cancel action', async () => {
+        const updateFeedFolderMock = vi.fn();
+        vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
+            feeds: [{ id: 1, title: 'Feed 1', url: 'https://example.com/1', last_fetched: null }],
+            folders: [],
+            selectedFeedId: null,
+            setSelectedFeedId: vi.fn(),
+            addFeed: vi.fn(),
+            deleteFeed: vi.fn(),
+            refreshFeeds: vi.fn(),
+            isLoading: false,
+            markFeedAsUnread: vi.fn(),
+            addFolder: vi.fn(),
+            deleteFolder: vi.fn(),
+            updateFeedFolder: updateFeedFolderMock
+        } as unknown as ReturnType<typeof AppContextModule.useAppContext>);
+
+        window.api = {
+            showFeedContextMenu: vi.fn().mockResolvedValue({ action: 'other' }),
+        } as unknown as typeof window.api;
+
+        render(<Sidebar />);
+
+        fireEvent.contextMenu(screen.getByText('Feed 1'));
+
+        await waitFor(() => {
+            expect(updateFeedFolderMock).not.toHaveBeenCalled();
+        });
+    });
+
+    it('handles feed context menu (delete cancel)', async () => {
+        const deleteFeedMock = vi.fn();
+        vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
+            feeds: [{ id: 1, title: 'Feed 1', url: 'https://example.com/1', last_fetched: null }],
+            folders: [],
+            selectedFeedId: null,
+            setSelectedFeedId: vi.fn(),
+            addFeed: vi.fn(),
+            deleteFeed: deleteFeedMock,
+            refreshFeeds: vi.fn(),
+            isLoading: false,
+            markFeedAsUnread: vi.fn(),
+            addFolder: vi.fn(),
+            deleteFolder: vi.fn(),
+            updateFeedFolder: vi.fn()
+        } as unknown as ReturnType<typeof AppContextModule.useAppContext>);
+
+        window.api = {
+            showFeedContextMenu: vi.fn().mockResolvedValue({ action: 'delete' }),
+        } as unknown as typeof window.api;
+
+        window.confirm = vi.fn().mockReturnValue(false);
+
+        render(<Sidebar />);
+
+        fireEvent.contextMenu(screen.getByText('Feed 1'));
+
+        await waitFor(() => {
+            expect(deleteFeedMock).not.toHaveBeenCalled();
+        });
+    });
+
+    it('handles context menu for folder delete cancel', async () => {
+        const deleteFolderMock = vi.fn();
+        vi.spyOn(AppContextModule, 'useAppContext').mockReturnValue({
+            feeds: [],
+            folders: [{ id: 1, name: 'News' }],
+            selectedFeedId: null,
+            setSelectedFeedId: vi.fn(),
+            addFeed: vi.fn(),
+            deleteFeed: vi.fn(),
+            refreshFeeds: vi.fn(),
+            isLoading: false,
+            markFeedAsUnread: vi.fn(),
+            addFolder: vi.fn(),
+            deleteFolder: deleteFolderMock,
+            updateFeedFolder: vi.fn()
+        } as unknown as ReturnType<typeof AppContextModule.useAppContext>);
+
+        window.api = {
+            showFolderContextMenu: vi.fn().mockResolvedValue('delete'),
+        } as unknown as typeof window.api;
+
+        window.confirm = vi.fn().mockReturnValue(false);
+
+        render(<Sidebar />);
+
+        fireEvent.contextMenu(screen.getByText('📁 News'));
+
+        await waitFor(() => {
+            expect(deleteFolderMock).not.toHaveBeenCalled();
         });
     });
 
