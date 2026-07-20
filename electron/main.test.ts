@@ -179,6 +179,10 @@ describe('main', () => {
             vi.mocked(shell.openExternal).mockClear()
             expect(handler({ url: 'javascript:alert(1)' })).toEqual({ action: 'deny' })
             expect(shell.openExternal).not.toHaveBeenCalled()
+
+            vi.mocked(shell.openExternal).mockClear()
+            expect(handler({ url: 'not-a-valid-url' })).toEqual({ action: 'deny' })
+            expect(shell.openExternal).not.toHaveBeenCalled()
         }
 
         // Also test will-navigate
@@ -194,6 +198,10 @@ describe('main', () => {
 
             vi.mocked(shell.openExternal).mockClear()
             cb(e, 'file:///etc/passwd')
+            expect(shell.openExternal).not.toHaveBeenCalled()
+
+            vi.mocked(shell.openExternal).mockClear()
+            cb(e, 'not-a-valid-url')
             expect(shell.openExternal).not.toHaveBeenCalled()
         }
 
@@ -391,6 +399,12 @@ describe('main', () => {
             }
         }
 
+        // validateSender should throw if sender URL is invalid
+        const { validateSender } = await import('./main')
+        expect(() => {
+            validateSender({ senderFrame: { url: 'http://malicious.com' } } as any)
+        }).toThrow('Unauthorized IPC message from: http://malicious.com')
+
         // Execute ipcMain.on handlers
         const onCalls = mockIpcMainOn.mock.calls
         for (const call of onCalls) {
@@ -498,6 +512,47 @@ describe('main', () => {
 
         cb()
         expect(MockBrowserWindow.getAllWindows).toHaveBeenCalled()
+    })
+
+    it('should create main window without VITE_DEV_SERVER_URL', async () => {
+        const originalViteUrl = process.env.VITE_DEV_SERVER_URL
+        delete process.env.VITE_DEV_SERVER_URL
+
+        // Reset modules so main.ts re-evaluates
+        vi.resetModules()
+
+        await import('./main')
+
+        expect(mockWindowObj.loadURL).toHaveBeenCalledWith('app://-/index.html')
+
+        if (originalViteUrl) {
+            process.env.VITE_DEV_SERVER_URL = originalViteUrl
+        }
+    })
+
+    it('should handle app:// protocol without /-/ host separator', async () => {
+        const { app, protocol, net } = await import('electron')
+        await import('./main')
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const whenReadyCb = (app.whenReady as any).mock.results[0]?.value;
+        if (whenReadyCb) {
+             await whenReadyCb;
+        }
+
+        // Find the protocol.handle call for 'app'
+        const handleMock = vi.mocked(protocol.handle)
+        const appProtocolHandlerCall = handleMock.mock.calls.find((call) => call[0] === 'app')
+        expect(appProtocolHandlerCall).toBeDefined()
+
+        const handler = appProtocolHandlerCall[1]
+
+        const validRequestNoHost = { url: 'app://-/index.html' }
+        const requestWithHyphen = { url: 'app://host/-/index.html' }
+        await handler(requestWithHyphen)
+        vi.mocked(net.fetch).mockClear()
+        await handler(validRequestNoHost)
+        expect(net.fetch).toHaveBeenCalledTimes(1)
     })
 
     it('should handle custom app:// protocol and prevent path traversal', async () => {

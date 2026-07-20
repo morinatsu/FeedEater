@@ -120,6 +120,16 @@ describe('DB Repository', () => {
         markFeedAsRead(1);
         expect(mockDb.prepare).toHaveBeenCalledWith('UPDATE items SET is_read = ? WHERE feed_id = ?');
     });
+
+    it('should mark all items in a feed as unread', () => {
+        markFeedAsRead(1, false);
+        expect(mockRun).toHaveBeenCalledWith(0, 1);
+    });
+
+    it('should mark item as unread', () => {
+        markItemAsRead('item1', false);
+        expect(mockRun).toHaveBeenCalledWith(0, 'item1');
+    });
 });
 
 

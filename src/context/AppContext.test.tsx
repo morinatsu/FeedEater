@@ -152,6 +152,17 @@ describe('AppContext', () => {
         expect(result.current.selectedItemId).toBeNull(); // It resets item selection
     });
 
+    it('handles adding a feed successfully no feed obj', async () => {
+        (window.api.addFeed as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.addFeed('http://newfeed.com');
+        });
+    });
+
     it('handles adding a feed successfully', async () => {
         (window.api.addFeed as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true, feed: { id: 2 } });
 
@@ -173,6 +184,19 @@ describe('AppContext', () => {
         expect(result.current.selectedFeedId).toBe(2);
     });
 
+    it('handles adding a feed failure no error string', async () => {
+        (window.api.addFeed as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: false });
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.addFeed('http://newfeed.com');
+        });
+
+        expect(result.current.error).toBe('Failed to add feed');
+    });
+
     it('handles adding a feed failure', async () => {
         (window.api.addFeed as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: false, error: 'Invalid URL' });
 
@@ -188,6 +212,36 @@ describe('AppContext', () => {
         });
 
         expect(result.current.error).toBe('Invalid URL');
+    });
+
+    it('handles deleting a feed successfully unselected', async () => {
+        (window.api.deleteFeed as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        act(() => {
+            result.current.setSelectedFeedId(2);
+        });
+
+        await act(async () => {
+            await result.current.deleteFeed(1);
+        });
+    });
+
+    it('handles deleting a feed successfully null select', async () => {
+        (window.api.deleteFeed as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        act(() => {
+            result.current.setSelectedFeedId(null);
+        });
+
+        await act(async () => {
+            await result.current.deleteFeed(1);
+        });
     });
 
     it('handles deleting a feed successfully', async () => {
@@ -215,6 +269,19 @@ describe('AppContext', () => {
         expect(window.api.deleteFeed).toHaveBeenCalledWith(1);
         expect(result.current.selectedFeedId).toBeNull(); // Reset selected feed id
         expect(window.api.getFeeds).toHaveBeenCalledTimes(1);
+    });
+
+    it('handles deleting a feed error response no error string', async () => {
+        (window.api.deleteFeed as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: false });
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.deleteFeed(1);
+        });
+
+        expect(result.current.error).toBe('Failed to delete feed');
     });
 
     it('handles deleting a feed error response', async () => {
@@ -271,6 +338,19 @@ describe('AppContext', () => {
         expect(window.api.getFolders).toHaveBeenCalledTimes(1);
     });
 
+    it('handles adding folder failure no error string', async () => {
+        (window.api.addFolder as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: false });
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.addFolder('Folder 2');
+        });
+
+        expect(result.current.error).toBe('Failed to add folder');
+    });
+
     it('handles adding folder failure', async () => {
         (window.api.addFolder as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: false, error: 'Failed' });
 
@@ -319,6 +399,19 @@ describe('AppContext', () => {
         expect(window.api.getFeeds).toHaveBeenCalledTimes(1);
     });
 
+    it('handles deleting folder failure no error string', async () => {
+        (window.api.deleteFolder as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: false });
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.deleteFolder(1);
+        });
+
+        expect(result.current.error).toBe('Failed to delete folder');
+    });
+
     it('handles deleting folder failure', async () => {
         (window.api.deleteFolder as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: false, error: 'Failed' });
 
@@ -365,6 +458,19 @@ describe('AppContext', () => {
         expect(window.api.getFeeds).toHaveBeenCalledTimes(1);
     });
 
+    it('handles updating feed folder failure no error string', async () => {
+        (window.api.updateFeedFolder as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: false });
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.updateFeedFolder(1, 2);
+        });
+
+        expect(result.current.error).toBe('Failed to update feed folder');
+    });
+
     it('handles updating feed folder failure', async () => {
         (window.api.updateFeedFolder as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: false, error: 'Failed' });
 
@@ -391,6 +497,275 @@ describe('AppContext', () => {
         expect(result.current.error).toBe('Failed to update feed folder');
     });
 
+    it('handles mark item as read missing target item', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.markItemAsRead('non-existent');
+        });
+    });
+
+    it('handles mark item as unread missing target item', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.markItemAsUnread('non-existent');
+        });
+    });
+
+    it('handles mark item as unread target item already unread', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await waitFor(() => {
+            expect(result.current.items).toHaveLength(3);
+        });
+
+        await act(async () => {
+            await result.current.markItemAsUnread('1');
+        });
+    });
+
+    it('optimistically updates item as read where feed lacks unread_count', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: 1, title: 'Feed 1', url: 'http://test.com', folder_id: null }]); // no unread_count property
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.markItemAsRead('1');
+        });
+    });
+
+    it('optimistically updates item as unread where feed lacks unread_count', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: 1, title: 'Feed 1', url: 'http://test.com', folder_id: null }]); // no unread_count property
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { id: '1', title: 'Item 1', feed_id: 1, pub_date: '2023-01-02T00:00:00Z', is_read: true },
+        ]);
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.markItemAsUnread('1');
+        });
+    });
+
+    it('handles mark item as read target item different feed with existing feeds', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: 2, title: 'Feed 2', url: 'http://test.com', folder_id: null }]);
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { id: '1', title: 'Item 1', feed_id: 1, pub_date: '2023-01-02T00:00:00Z', is_read: false },
+        ]);
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await waitFor(() => {
+            expect(result.current.feeds).toHaveLength(1);
+        });
+
+        await act(async () => {
+            await result.current.markItemAsRead('1');
+        });
+    });
+
+    it('handles mark item as unread target item different feed with existing feeds', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: 2, title: 'Feed 2', url: 'http://test.com', folder_id: null }]);
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { id: '1', title: 'Item 1', feed_id: 1, pub_date: '2023-01-02T00:00:00Z', is_read: true },
+        ]);
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await waitFor(() => {
+            expect(result.current.feeds).toHaveLength(1);
+        });
+
+        await act(async () => {
+            await result.current.markItemAsUnread('1');
+        });
+    });
+
+    it('handles mark item as read target item different feed', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.markItemAsRead('3');
+        });
+    });
+
+    it('optimistically updates item as read feed without unread_count but does not match feed_id', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: 2, title: 'Feed 2', url: 'http://test.com', folder_id: null }]); // no unread_count property
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { id: '1', title: 'Item 1', feed_id: 1, pub_date: '2023-01-02T00:00:00Z', is_read: false },
+        ]);
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.markItemAsRead('1');
+        });
+    });
+
+    it('optimistically updates item as unread feed without unread_count but does not match feed_id', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: 2, title: 'Feed 2', url: 'http://test.com', folder_id: null }]); // no unread_count property
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { id: '1', title: 'Item 1', feed_id: 1, pub_date: '2023-01-02T00:00:00Z', is_read: true },
+        ]);
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.markItemAsUnread('1');
+        });
+    });
+
+    it('optimistically updates item as read when feed unread count drops below 0', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: 1, title: 'Feed 1', url: 'http://test.com', folder_id: null, unread_count: 0 }]); // drops below 0
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { id: '1', title: 'Item 1', feed_id: 1, pub_date: '2023-01-02T00:00:00Z', is_read: false },
+        ]);
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.markItemAsRead('1');
+        });
+    });
+
+    it('optimistically updates item as read feed without unread_count and matches feed_id', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: 1, title: 'Feed 1', url: 'http://test.com', folder_id: null }]); // no unread_count property
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { id: '1', title: 'Item 1', feed_id: 1, pub_date: '2023-01-02T00:00:00Z', is_read: false },
+        ]);
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await waitFor(() => {
+            expect(result.current.feeds).toHaveLength(1);
+        });
+
+        await act(async () => {
+            await result.current.markItemAsRead('1');
+        });
+    });
+
+    it('optimistically updates item as unread feed without unread_count and matches feed_id', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: 1, title: 'Feed 1', url: 'http://test.com', folder_id: null }]); // no unread_count property
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { id: '1', title: 'Item 1', feed_id: 1, pub_date: '2023-01-02T00:00:00Z', is_read: true },
+        ]);
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await waitFor(() => {
+            expect(result.current.feeds).toHaveLength(1);
+        });
+
+        await act(async () => {
+            await result.current.markItemAsUnread('1');
+        });
+    });
+
+    it('optimistically updates item as read where feed lacks unread_count but matches feed_id', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: 1, title: 'Feed 1', url: 'http://test.com', folder_id: null }]); // no unread_count property
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { id: '1', title: 'Item 1', feed_id: 1, pub_date: '2023-01-02T00:00:00Z', is_read: false },
+        ]);
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.markItemAsRead('1');
+        });
+    });
+
+    it('optimistically updates item as unread feed missing unread_count but matches feed id default to 0', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: 1, title: 'Feed 1', url: 'http://test.com', folder_id: null }]); // defaults to 0
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { id: '1', title: 'Item 1', feed_id: 1, pub_date: '2023-01-02T00:00:00Z', is_read: true },
+        ]);
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.markItemAsUnread('1');
+        });
+    });
+
+    it('optimistically updates item as unread where feed lacks unread_count but matches feed_id', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+        (window.api.getFeeds as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: 1, title: 'Feed 1', url: 'http://test.com', folder_id: null }]); // no unread_count property
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { id: '1', title: 'Item 1', feed_id: 1, pub_date: '2023-01-02T00:00:00Z', is_read: true },
+        ]);
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.markItemAsUnread('1');
+        });
+    });
+
+    it('optimistically updates item as read target item missing feed id', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { id: '1', title: 'Item 1', feed_id: 99, pub_date: '2023-01-02T00:00:00Z', is_read: false },
+        ]);
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.markItemAsRead('1');
+        });
+    });
+
+    it('optimistically updates item as unread target item missing feed id', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { id: '1', title: 'Item 1', feed_id: 99, pub_date: '2023-01-02T00:00:00Z', is_read: true },
+        ]);
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.markItemAsUnread('1');
+        });
+    });
+
     it('optimistically updates item as read', async () => {
         (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
@@ -410,6 +785,21 @@ describe('AppContext', () => {
         expect(window.api.markAsRead).toHaveBeenCalledWith('1');
         // Check optimistic update
         expect(result.current.items.find(i => i.id === '1')?.is_read).toBe(true);
+    });
+
+    it('handles mark item as unread target item different feed', async () => {
+        (window.api.markAsRead as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
+        (window.api.getItems as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { id: '1', title: 'Item 1', feed_id: 1, pub_date: '2023-01-02T00:00:00Z', is_read: true },
+            { id: '3', title: 'Item 3', feed_id: 99, pub_date: '2023-01-02T00:00:00Z', is_read: true }
+        ]);
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await act(async () => {
+            await result.current.markItemAsUnread('3');
+        });
     });
 
     it('optimistically updates item as unread', async () => {
@@ -529,6 +919,17 @@ describe('AppContext', () => {
 
         expect(consoleSpy).toHaveBeenCalledWith("Failed to mark feed as unread", expect.any(Error));
         consoleSpy.mockRestore();
+    });
+
+    it('handles refreshFeeds exception string', async () => {
+        (window.api.refreshFeeds as unknown as ReturnType<typeof vi.fn>).mockRejectedValue('String Error');
+
+        const wrapper = ({ children }: { children: React.ReactNode }) => <AppProvider>{children}</AppProvider>;
+        const { result } = renderHook(() => useAppContext(), { wrapper });
+
+        await waitFor(() => {
+            expect(result.current.error).toBe('Failed to refresh feeds');
+        });
     });
 
     it('handles refreshFeeds exception', async () => {
