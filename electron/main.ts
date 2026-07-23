@@ -20,6 +20,8 @@ function createWindow() {
     icon: path.join(process.env.VITE_PUBLIC as string, 'AppIcon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
     },
   })
 
