@@ -68,6 +68,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const refreshFeeds = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await window.api.refreshFeeds();
+      if (result.success) {
+        // Reload feeds and items to show new data
+        await loadFeeds();
+        await loadItems(selectedFeedId || undefined);
+      } else {
+        setError(result.error || "Failed to refresh feeds");
+      }
+      return result;
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to refresh feeds";
+      setError("Failed to refresh feeds");
+      return { success: false, error: errorMsg };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     loadFolders();
     loadFeeds();
@@ -81,6 +104,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     loadItems(selectedFeedId || undefined);
     setSelectedItemId(null); // Reset item selection
   }, [selectedFeedId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const addFeed = async (url: string) => {
     setIsLoading(true);
@@ -242,27 +266,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const refreshFeeds = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await window.api.refreshFeeds();
-      if (result.success) {
-        // Reload feeds and items to show new data
-        await loadFeeds();
-        await loadItems(selectedFeedId || undefined);
-      } else {
-        setError(result.error || "Failed to refresh feeds");
-      }
-      return result;
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Failed to refresh feeds";
-      setError("Failed to refresh feeds");
-      return { success: false, error: errorMsg };
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const sortedItems = useMemo(() => {
     return [...items].sort((a, b) => {

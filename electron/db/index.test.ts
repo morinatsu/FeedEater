@@ -33,7 +33,7 @@ vi.mock('better-sqlite3', () => {
 import { initDB, getDB, closeDB } from './index';
 
 describe('Database Initialization', () => {
-    let warnSpy: any;
+    let warnSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
         vi.clearAllMocks();

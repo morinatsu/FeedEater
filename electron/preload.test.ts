@@ -23,6 +23,7 @@ describe('preload script', () => {
 
         expect(contextBridge.exposeInMainWorld).toHaveBeenCalledWith('api', expect.any(Object))
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const api: any = vi.mocked(contextBridge.exposeInMainWorld).mock.calls[0][1]
 
         // Folders
