@@ -18,3 +18,7 @@
 - [x] **Electron Fuse (ヒューズ) の検証と変更**
   - [Electron セキュリティベストプラクティス](https://www.electronjs.org/ja/docs/latest/tutorial/security#19-check-which-fuses-you-can-change) 対応
   - `electron-builder` や専用のパッケージ設定で `runAsNode` などの不要な Electron の内部機能を無効化（Fuseを切り落とす）して攻撃対象領域を減らす
+
+- [x] **コンテキストアイソレーションと Node.js 統合の明示的な設定**
+  - [Electron セキュリティベストプラクティス](https://www.electronjs.org/ja/docs/latest/tutorial/security#3-enable-context-isolation-for-remote-content) 対応
+  - `webPreferences` にて `contextIsolation: true` および `nodeIntegration: false` を明示的に設定してレンダラープロセスの権限分離を確保
