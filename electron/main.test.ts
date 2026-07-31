@@ -402,6 +402,7 @@ describe('main', () => {
         // validateSender should throw if sender URL is invalid
         const { validateSender } = await import('./main')
         expect(() => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             validateSender({ senderFrame: { url: 'http://malicious.com' } } as any)
         }).toThrow('Unauthorized IPC message from: http://malicious.com')
 
