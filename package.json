@@ -59,8 +59,15 @@
     },
     "win": {
       "target": [
-        "nsis"
+        "nsis",
+        "appx"
       ]
+    },
+    "appx": {
+      "applicationId": "FeedEater",
+      "identityName": "morinatsu.FeedEater",
+      "publisher": "CN=9DAABFC6-428E-4C21-A9A8-784791B55274",
+      "publisherDisplayName": "morinatsu"
     },
     "afterPack": "./build/afterPack.mjs",
     "nsis": {
