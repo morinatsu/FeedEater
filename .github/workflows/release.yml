@@ -27,9 +27,16 @@ jobs:
       - name: Run Tests
         run: npm test
 
-      - name: Build and Release
-        # electron-builder requires the --publish always flag to upload assets to GitHub Releases
+      - name: Build Application
         run: npm run release
+
+      - name: Create Release Draft & Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            release/*.exe
+            release/*.blockmap
+            release/latest.yml
         env:
-          # GitHub Actionsが自動生成するトークンを認証に使用します
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
