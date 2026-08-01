@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build && node scripts/smoke-test.mjs",
-    "release": "tsc -b && vite build && node scripts/smoke-test.mjs && electron-builder --publish always",
+    "release": "tsc -b && vite build && node scripts/smoke-test.mjs && electron-builder --publish onTagOrDraft",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
