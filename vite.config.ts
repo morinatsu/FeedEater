@@ -12,13 +12,11 @@ export default defineConfig({
         entry: 'electron/main.ts',
         vite: {
           build: {
-            lib: {
-              entry: 'electron/main.ts',
-              formats: ['cjs'],
-              fileName: () => 'main.js',
-            },
             rollupOptions: {
               external: ['better-sqlite3'],
+              output: {
+                banner: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);",
+              },
             },
           },
         },
