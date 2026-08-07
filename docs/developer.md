@@ -57,5 +57,14 @@ npm run test:watch
 ### データベース
 SQLiteデータベースファイル (`feedeater.sqlite`) は、各OSのユーザーデータディレクトリ（Windowsの場合は `%APPDATA%\feedeater\db\` などを想定）に生成されます。
 
+### リリースとパッケージング (Microsoft Store / AppX)
+Microsoft Store向けビルドに必要なビジュアルアセット (`build/appx/` 配下の `StoreLogo.png`, `Square150x150Logo.png` 等) は以下のコマンドで自動生成されます。
+
+```sh
+npm run build:assets
+```
+
+また、`npm run release` を実行すると自動的にビジュアルアセットが生成された上で、ビルドおよびパッケージ作成が行われます。
+
 ## 今後の拡張に向けて
 機能追加を行う際は、Mainプロセスの `electron/db/repository.ts` や `electron/services/rss.ts` でバックエンドロジックを実装し、`main.ts` で `ipcMain.handle` を追加、それを `preload.ts` と `src/types/index.ts` に型定義として露出させたあとにReactから呼び出す、というフローが基本となります。
