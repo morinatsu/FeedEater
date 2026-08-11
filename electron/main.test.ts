@@ -286,19 +286,18 @@ describe('main', () => {
                     Menu.buildFromTemplate = vi.fn((template) => {
                          const item = template.find((t: { label: string; click?: () => void }) => t.label === '削除')
                          if (item && item.click) item.click()
-                         return { popup: mockPopup, once: vi.fn((e, cb) => cb()) } as unknown as Electron.Menu
+                         return { popup: mockPopup, once: (e: unknown, cb: () => void) => cb() } as unknown as Electron.Menu
                     })
-                    await handler(safeEvent, 1)
+                    vi.useFakeTimers(); const px = handler(safeEvent, 1); vi.runAllTimers(); await px; vi.useRealTimers();
                     expect(Menu.buildFromTemplate).toHaveBeenCalled()
                     expect(mockPopup).toHaveBeenCalled()
 
                     // Cancel path
-                    Menu.buildFromTemplate = vi.fn(() => ({ popup: mockPopup, once: vi.fn((e, cb) => {
-                         cb()
-                         vi.runAllTimers()
-                    }) }))
+                    vi.useFakeTimers()
+                    Menu.buildFromTemplate = vi.fn(() => ({ popup: mockPopup, once: (e: unknown, cb: () => void) => { cb() } }))
                     vi.useFakeTimers()
                     const p = handler(safeEvent, 1)
+                    await Promise.resolve()
                     vi.runAllTimers()
                     await p
                     vi.useRealTimers()
@@ -321,20 +320,18 @@ describe('main', () => {
                              if (outItem && outItem.click) outItem.click()
                          }
 
-                         return { popup: mockPopup, once: vi.fn((e, cb) => cb()) } as unknown as Electron.Menu
+                         return { popup: mockPopup, once: (e: unknown, cb: () => void) => cb() } as unknown as Electron.Menu
                     })
-                    await handler(safeEvent, 1)
+                    vi.useFakeTimers(); const px = handler(safeEvent, 1); vi.runAllTimers(); await px; vi.useRealTimers();
                     expect(Menu.buildFromTemplate).toHaveBeenCalled()
                     expect(mockPopup).toHaveBeenCalled()
 
                     // Cancel path
                     mockRepository.getFolders.mockReturnValueOnce([])
-                    Menu.buildFromTemplate = vi.fn(() => ({ popup: mockPopup, once: vi.fn((e, cb) => {
-                         cb()
-                         vi.runAllTimers()
-                    }) }))
+                    Menu.buildFromTemplate = vi.fn(() => ({ popup: mockPopup, once: (e: unknown, cb: () => void) => { cb() } }))
                     vi.useFakeTimers()
                     const p = handler(safeEvent, 1)
+                    await Promise.resolve()
                     vi.runAllTimers()
                     await p
                     vi.useRealTimers()
@@ -343,20 +340,18 @@ describe('main', () => {
                      Menu.buildFromTemplate = vi.fn((template) => {
                          const item = template.find((t: { label: string; click?: () => void }) => t.label === '未読にする')
                          if (item && item.click) item.click()
-                         return { popup: mockPopup, once: vi.fn((e, cb) => cb()) } as unknown as Electron.Menu
+                         return { popup: mockPopup, once: (e: unknown, cb: () => void) => cb() } as unknown as Electron.Menu
                      })
-                     await handler(safeEvent)
+                     vi.useFakeTimers(); const py = handler(safeEvent); vi.runAllTimers(); await py; vi.useRealTimers();
                      expect(Menu.buildFromTemplate).toHaveBeenCalled()
                      expect(mockPopup).toHaveBeenCalled()
 
                      // Test the cancel path (when clicked is false)
-                     Menu.buildFromTemplate = vi.fn(() => ({ popup: mockPopup, once: vi.fn((e, cb) => {
-                         // trigger callback
-                         cb()
-                         vi.runAllTimers() // needed for setTimeout
-                     }) }))
+                     vi.useFakeTimers()
+                     Menu.buildFromTemplate = vi.fn(() => ({ popup: mockPopup, once: (e: unknown, cb: () => void) => { cb() } }))
                      vi.useFakeTimers()
                      const p = handler(safeEvent)
+                     await Promise.resolve()
                      vi.runAllTimers()
                      await p
                      vi.useRealTimers()
@@ -394,8 +389,8 @@ describe('main', () => {
                     expect(mockSyncAllFeeds).toHaveBeenCalled()
                 }
             } catch (error) {
-                // Ignore any async errors for now just wanting coverage
-                console.log(error)
+                console.error('Error in handler loop:', error);
+                throw error;
             }
         }
 
@@ -406,8 +401,28 @@ describe('main', () => {
             validateSender({ senderFrame: { url: 'http://malicious.com' } } as any)
         }).toThrow('Unauthorized IPC message from: http://malicious.com')
 
+        expect(() => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            validateSender({ sender: { getURL: () => 'http://malicious.com' } } as any)
+        }).toThrow('Unauthorized IPC message from: http://malicious.com')
+
+        expect(() => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            validateSender({} as any)
+        }).toThrow('Unauthorized IPC message from: ')
+
         // Execute ipcMain.on handlers
         const onCalls = mockIpcMainOn.mock.calls
+
+        const willNavigateHandler = mockWindowObj.webContents.on.mock.calls.find((c: [string, (...args: unknown[]) => void]) => c[0] === 'will-navigate')![1]
+        const preventDefault = vi.fn()
+        willNavigateHandler({ preventDefault } as unknown as Event, 'https://example.com/other')
+        expect(shell.openExternal).toHaveBeenCalledWith('https://example.com/other')
+
+        const preventDefault2 = vi.fn()
+        willNavigateHandler({ preventDefault: preventDefault2 } as unknown as Event, process.env.VITE_DEV_SERVER_URL || '')
+        expect(preventDefault2).not.toHaveBeenCalled()
+
         for (const call of onCalls) {
             const channel = call[0]
             const handler = call[1]
@@ -453,6 +468,10 @@ describe('main', () => {
         onBeforeRequestCb({ url: 'http://example.com' }, httpCallback)
         expect(httpCallback).toHaveBeenCalledWith({ redirectURL: 'https://example.com' })
 
+        const wsCallback = vi.fn()
+        onBeforeRequestCb({ url: 'ws://localhost:3000' }, wsCallback)
+        expect(wsCallback).toHaveBeenCalledWith({})
+
         const localCallback = vi.fn()
         onBeforeRequestCb({ url: 'http://localhost:3000' }, localCallback)
         expect(localCallback).toHaveBeenCalledWith({})
@@ -487,10 +506,10 @@ describe('main', () => {
         const { closeDB } = await import('./db/index')
         await import('./main')
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const onMock = app.on as any
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const cb = onMock.mock.calls.find((call: any) => call[0] === 'window-all-closed')![1]
+
+        const onMock = app.on as unknown as ReturnType<typeof vi.fn>
+
+        const cb = onMock.mock.calls.find((call: [string, (...args: unknown[]) => void]) => call[0] === 'window-all-closed')![1]
 
         const originalPlatform = process.platform
         Object.defineProperty(process, 'platform', { value: 'win32' })
@@ -502,20 +521,55 @@ describe('main', () => {
         Object.defineProperty(process, 'platform', { value: originalPlatform })
     })
 
+
+    it('handles window-all-closed on darwin', async () => {
+        const { app } = await import('electron')
+        const { closeDB } = await import('./db/index')
+        await import('./main')
+
+        const onMock = app.on as unknown as ReturnType<typeof vi.fn>
+        const cb = onMock.mock.calls.find((call: [string, (...args: unknown[]) => void]) => call[0] === 'window-all-closed')![1]
+
+        const originalPlatform = process.platform
+        Object.defineProperty(process, 'platform', { value: 'darwin' })
+
+        vi.mocked(app.quit).mockClear()
+
+        cb()
+        expect(app.quit).not.toHaveBeenCalled()
+        expect(closeDB).toHaveBeenCalled()
+
+        Object.defineProperty(process, 'platform', { value: originalPlatform })
+    })
+
     it('handles activate properly', async () => {
         const { app } = await import('electron')
         await import('./main')
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const onMock = app.on as any
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const cb = onMock.mock.calls.find((call: any) => call[0] === 'activate')![1]
+
+        const onMock = app.on as unknown as ReturnType<typeof vi.fn>
+
+        const cb = onMock.mock.calls.find((call: [string, (...args: unknown[]) => void]) => call[0] === 'activate')![1]
 
         cb()
         expect(MockBrowserWindow.getAllWindows).toHaveBeenCalled()
     })
 
+
+    it('handles activate properly when window is not null', async () => {
+        const { app } = await import('electron')
+        await import('./main')
+
+        const onMock = app.on as unknown as ReturnType<typeof vi.fn>
+        const cb = onMock.mock.calls.find((call: [string, (...args: unknown[]) => void]) => call[0] === 'activate')![1]
+
+        vi.mocked(MockBrowserWindow.getAllWindows).mockReturnValueOnce([new MockBrowserWindow() as unknown as Electron.BrowserWindow])
+        cb()
+    })
+
     it('should create main window without VITE_DEV_SERVER_URL', async () => {
+        const { app } = await import('electron')
+        app.isPackaged = true
         const originalViteUrl = process.env.VITE_DEV_SERVER_URL
         delete process.env.VITE_DEV_SERVER_URL
 
