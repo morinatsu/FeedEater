@@ -147,6 +147,16 @@ vi.mock('./db/index', () => ({
 }))
 
 describe('main', () => {
+    it('should set VITE_PUBLIC correctly when packaged', async () => {
+        const { app } = await import('electron');
+        Object.defineProperty(app, 'isPackaged', { value: true, configurable: true });
+
+        vi.resetModules();
+        await import('./main');
+        expect(process.env.VITE_PUBLIC).toBe(process.env.DIST);
+
+        Object.defineProperty(app, 'isPackaged', { value: false, configurable: true });
+    });
     beforeEach(() => {
         vi.clearAllMocks()
         process.env.VITE_DEV_SERVER_URL = 'http://localhost:3000'
@@ -203,6 +213,18 @@ describe('main', () => {
             vi.mocked(shell.openExternal).mockClear()
             cb(e, 'not-a-valid-url')
             expect(shell.openExternal).not.toHaveBeenCalled()
+
+            vi.mocked(shell.openExternal).mockClear()
+            cb(e, 'http://localhost:3000') // url === VITE_DEV_SERVER_URL -> doesn't enter if block
+            expect(shell.openExternal).not.toHaveBeenCalled()
+
+            vi.mocked(shell.openExternal).mockClear()
+            cb(e, 'http://localhost:3000/index.html') // url !== VITE_DEV_SERVER_URL but includes index.html
+            expect(shell.openExternal).not.toHaveBeenCalled()
+
+            vi.mocked(shell.openExternal).mockClear()
+            cb(e, 'http://localhost:3001/') // neither -> enters if block
+            expect(shell.openExternal).toHaveBeenCalled()
         }
 
         // Use imports to silence unused variable errors if we just need coverage
@@ -286,9 +308,18 @@ describe('main', () => {
                     Menu.buildFromTemplate = vi.fn((template) => {
                          const item = template.find((t: { label: string; click?: () => void }) => t.label === '削除')
                          if (item && item.click) item.click()
-                         return { popup: mockPopup, once: vi.fn((e, cb) => cb()) } as unknown as Electron.Menu
+                         return { popup: mockPopup, once: vi.fn((e, cb) => {
+                             cb(); // immediately trigger menu-will-close inside the actual test code to ensure it runs its internal setTimeout path
+                         }) } as unknown as Electron.Menu
                     })
-                    await handler(safeEvent, 1)
+
+                    vi.useFakeTimers()
+                    const promiseFirst = handler(safeEvent, 1)
+                    await Promise.resolve()
+                    vi.runAllTimers()
+                    await promiseFirst
+                    vi.useRealTimers()
+
                     expect(Menu.buildFromTemplate).toHaveBeenCalled()
                     expect(mockPopup).toHaveBeenCalled()
 
@@ -343,9 +374,18 @@ describe('main', () => {
                      Menu.buildFromTemplate = vi.fn((template) => {
                          const item = template.find((t: { label: string; click?: () => void }) => t.label === '未読にする')
                          if (item && item.click) item.click()
-                         return { popup: mockPopup, once: vi.fn((e, cb) => cb()) } as unknown as Electron.Menu
+                         return { popup: mockPopup, once: vi.fn((e, cb) => {
+                             cb();
+                         }) } as unknown as Electron.Menu
                      })
-                     await handler(safeEvent)
+
+                     vi.useFakeTimers()
+                     const promiseFirstItem = handler(safeEvent)
+                     await Promise.resolve()
+                     vi.runAllTimers()
+                     await promiseFirstItem
+                     vi.useRealTimers()
+
                      expect(Menu.buildFromTemplate).toHaveBeenCalled()
                      expect(mockPopup).toHaveBeenCalled()
 
@@ -405,6 +445,11 @@ describe('main', () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             validateSender({ senderFrame: { url: 'http://malicious.com' } } as any)
         }).toThrow('Unauthorized IPC message from: http://malicious.com')
+
+        expect(() => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            validateSender({ senderFrame: undefined, sender: { getURL: () => '' } } as any)
+        }).toThrow('Unauthorized IPC message from: ')
 
         // Execute ipcMain.on handlers
         const onCalls = mockIpcMainOn.mock.calls
@@ -500,6 +545,39 @@ describe('main', () => {
         expect(closeDB).toHaveBeenCalled()
 
         Object.defineProperty(process, 'platform', { value: originalPlatform })
+    })
+
+    it('handles window-all-closed on darwin properly', async () => {
+        const { app } = await import('electron')
+        const { closeDB } = await import('./db/index')
+        await import('./main')
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const onMock = app.on as any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cb = onMock.mock.calls.find((call: any) => call[0] === 'window-all-closed')![1]
+
+        const originalPlatform = process.platform
+        Object.defineProperty(process, 'platform', { value: 'darwin' })
+
+        cb()
+        expect(closeDB).toHaveBeenCalled()
+
+        Object.defineProperty(process, 'platform', { value: originalPlatform })
+    })
+
+    it('handles activate when window exists properly', async () => {
+        const { app } = await import('electron')
+        await import('./main')
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const onMock = app.on as any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cb = onMock.mock.calls.find((call: any) => call[0] === 'activate')![1]
+
+        MockBrowserWindow.getAllWindows.mockReturnValueOnce([{}]);
+
+        cb()
     })
 
     it('handles activate properly', async () => {

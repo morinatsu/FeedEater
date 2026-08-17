@@ -33,6 +33,14 @@ vi.mock('better-sqlite3', () => {
 import { initDB, getDB, closeDB } from './index';
 
 describe('Database Initialization', () => {
+    it('should handle initDB with custom path and missing directory', () => {
+        vi.mocked(fs.existsSync).mockReturnValue(false);
+        vi.mocked(fs.mkdirSync).mockReturnValue('');
+
+        initDB('/custom/path/db/feedeater.sqlite');
+        expect(getDB()).toBeDefined();
+    });
+
     let warnSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {

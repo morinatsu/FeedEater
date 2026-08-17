@@ -191,6 +191,19 @@ describe('rss service', () => {
 });
 
 describe('RSS Service Additional coverage', () => {
+    it('should parse charset from content-type header with parameters', async () => {
+        const { registerFeed } = await import('./rss');
+
+        global.fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            arrayBuffer: async () => Buffer.from('<?xml version="1.0"?><rss><channel><title>Test Feed</title></channel></rss>'),
+            headers: new Headers({ 'content-type': 'application/rss+xml; charset=iso-8859-1' })
+        }) as unknown as typeof fetch;
+
+        const result = await registerFeed('https://example.com/test');
+        expect(result.success).toBe(true);
+    });
+
     it('should fallback to charset parsing from xml head', async () => {
         const { registerFeed } = await import('./rss');
 
