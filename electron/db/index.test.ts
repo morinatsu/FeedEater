@@ -81,6 +81,13 @@ describe('Database Initialization', () => {
         expect(mockExec).toHaveBeenCalledWith('CREATE INDEX IF NOT EXISTS idx_items_is_read ON items(is_read);');
     });
 
+
+    it('should handle initDB with default path and existing directory', () => {
+        vi.mocked(fs.existsSync).mockReturnValue(true);
+        initDB();
+        expect(fs.existsSync).toHaveBeenCalled();
+        expect(fs.mkdirSync).not.toHaveBeenCalled();
+    });
     it('should handle initDB with default path and missing directory', () => {
         vi.mocked(fs.existsSync).mockReturnValue(false);
         vi.mocked(fs.mkdirSync).mockReturnValue('');
