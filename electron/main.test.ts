@@ -196,12 +196,31 @@ describe('main', () => {
             expect(e.preventDefault).toHaveBeenCalled()
             expect(shell.openExternal).toHaveBeenCalledWith('https://example.com')
 
+            // Test dev server / local url behavior (does not preventDefault)
+            const e2 = { preventDefault: vi.fn() }
+            cb(e2, 'http://localhost:3000') // Matches VITE_DEV_SERVER_URL in the test environment
+            expect(e2.preventDefault).not.toHaveBeenCalled()
+
+            // Test index.html behavior (does not preventDefault)
+            const e3 = { preventDefault: vi.fn() }
+            cb(e3, 'app://-/index.html')
+            expect(e3.preventDefault).not.toHaveBeenCalled()
+
             vi.mocked(shell.openExternal).mockClear()
             cb(e, 'file:///etc/passwd')
             expect(shell.openExternal).not.toHaveBeenCalled()
 
             vi.mocked(shell.openExternal).mockClear()
             cb(e, 'not-a-valid-url')
+            expect(shell.openExternal).not.toHaveBeenCalled()
+
+            vi.mocked(shell.openExternal).mockClear()
+            cb(e, 'http://%%') // invalid url construction
+            expect(shell.openExternal).not.toHaveBeenCalled()
+
+            vi.mocked(shell.openExternal).mockClear()
+            cb(e, 'app://other/path')
+            expect(e.preventDefault).toHaveBeenCalled()
             expect(shell.openExternal).not.toHaveBeenCalled()
         }
 

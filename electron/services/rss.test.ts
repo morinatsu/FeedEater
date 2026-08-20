@@ -61,6 +61,56 @@ describe('rss service', () => {
         expect(result).toEqual({ success: true, imported: 4 });
     });
 
+    it('should ignore sync failures gracefully in syncAllFeeds', async () => {
+        const { getFeeds } = await import('../db/repository');
+        // @ts-expect-error - mocking imported function
+        getFeeds.mockReturnValue([
+            { id: 1, url: 'http://example.com/success' },
+            { id: 2, url: 'http://example.com/fail' }
+        ]);
+
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+
+        // Let one feed fail
+        global.fetch = vi.fn((url: RequestInfo | URL) => {
+            if (url.toString().includes('fail')) {
+                return Promise.resolve({
+                    ok: false,
+                    status: 500
+                });
+            }
+            return Promise.resolve({
+                ok: true,
+                arrayBuffer: () => Promise.resolve(new ArrayBuffer(10)),
+                headers: {
+                    get: () => 'text/xml'
+                }
+            });
+        }) as unknown as typeof fetch;
+
+        const result = await syncAllFeeds();
+        expect(result).toEqual({ success: true, imported: 2 });
+        consoleSpy.mockRestore();
+    });
+
+    it('should handle zero imported items in syncAllFeeds', async () => {
+        const { getFeeds } = await import('../db/repository');
+        // @ts-expect-error - mocking imported function
+        getFeeds.mockReturnValue([
+            { id: 1, url: 'http://example.com/success-no-items' }
+        ]);
+
+        const Parser = (await import('rss-parser')).default;
+        const originalParseString = new Parser().parseString;
+        const parseStringOverride = vi.fn().mockResolvedValue({
+            items: []
+        });
+        vi.mocked(originalParseString).mockImplementationOnce(parseStringOverride);
+
+        const result = await syncAllFeeds();
+        expect(result).toEqual({ success: true, imported: 0 });
+    });
+
     it('should return error if fetching feeds fails', async () => {
         // Suppress expected console.error during this test
         const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
