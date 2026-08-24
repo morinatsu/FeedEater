@@ -78,6 +78,42 @@ describe('rss service', () => {
         consoleSpy.mockRestore();
     });
 
+    it('should skip counting if syncFeed fails or imports nothing', async () => {
+        const { getFeeds } = await import('../db/repository');
+        // @ts-expect-error
+        getFeeds.mockReturnValue([
+            { id: 1, url: 'http://example.com/fail' },
+            { id: 2, url: 'http://example.com/empty' }
+        ]);
+
+        // Mock fetch to simulate failures or empty results based on URL
+        global.fetch = vi.fn().mockImplementation((url: string) => {
+            if (url === 'http://example.com/fail') {
+                return Promise.resolve({ ok: false, status: 500 } as unknown as Response);
+            }
+            return Promise.resolve({
+                ok: true,
+                arrayBuffer: () => Promise.resolve(Buffer.from(`<?xml version="1.0"?><rss><channel></channel></rss>`)),
+                headers: new Headers({ 'content-type': 'application/xml' })
+            } as unknown as Response);
+        });
+
+        const Parser = (await import('rss-parser')).default;
+        const parserInstance = new Parser();
+        // @ts-expect-error
+        parserInstance.parseString.mockResolvedValueOnce({
+            items: [] // No items for empty feed
+        });
+
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+
+        const result = await syncAllFeeds();
+
+        expect(result).toEqual({ success: true, imported: 0 });
+
+        consoleSpy.mockRestore();
+    });
+
     describe('fetchAndParseFeed (via registerFeed)', () => {
         it('should correctly escape ampersands but ignore CDATA blocks', async () => {
             const rawXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -188,9 +224,109 @@ describe('rss service', () => {
             consoleSpy.mockRestore();
         });
     });
+    describe('syncFeed edge cases', () => {
+        it('should handle missing item properties and use fallbacks', async () => {
+            const { syncFeed } = await import('./rss');
+            const { insertItem } = await import('../db/repository');
+
+            const Parser = (await import('rss-parser')).default;
+            const parserInstance = new Parser();
+            // @ts-expect-error
+            parserInstance.parseString.mockResolvedValueOnce({
+                title: 'Mock Feed',
+                items: [
+                    { content: 'Content without ID' }, // Missing id, skipped
+                    { guid: '123', link: '' }, // Missing title, missing pubDate, empty link
+                    { link: 'http://example.com' } // Missing guid, using link as ID
+                ]
+            });
+
+            const result = await syncFeed(99, 'https://example.com/feed');
+
+            expect(result.success).toBe(true);
+            expect(result.imported).toBe(2);
+            expect(insertItem).toHaveBeenCalledTimes(2);
+
+            // Check the inserted values for the second item
+            expect(insertItem).toHaveBeenNthCalledWith(1, expect.objectContaining({
+                id: '123',
+                title: 'No Title',
+                link: '',
+                pub_date: expect.any(String) // fallback to new Date().toISOString()
+            }));
+
+            // Check the inserted values for the third item (fallback id to link)
+            expect(insertItem).toHaveBeenNthCalledWith(2, expect.objectContaining({
+                id: 'http://example.com'
+            }));
+        });
+    });
 });
 
 describe('RSS Service Additional coverage', () => {
+    it('should use fallback title for feed if title is missing', async () => {
+        const { registerFeed } = await import('./rss');
+        const { addFeed } = await import('../db/repository');
+        // @ts-expect-error
+        addFeed.mockReturnValue({ id: 99, title: 'Untitled Feed', url: 'https://example.com/feed' });
+
+        global.fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            arrayBuffer: async () => Buffer.from(`<?xml version="1.0"?><rss><channel></channel></rss>`),
+            headers: new Headers({ 'content-type': 'application/xml' })
+        }) as unknown as typeof fetch;
+
+        const Parser = (await import('rss-parser')).default;
+        const parserInstance = new Parser();
+        // @ts-expect-error
+        parserInstance.parseString.mockResolvedValueOnce({
+            items: [] // No title
+        });
+
+        const result = await registerFeed('https://example.com/feed');
+        expect(result.success).toBe(true);
+        expect(addFeed).toHaveBeenCalledWith('Untitled Feed', 'https://example.com/feed');
+    });
+
+    it('should extract charset from content-type header', async () => {
+        const { registerFeed } = await import('./rss');
+
+        global.fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            arrayBuffer: async () => Buffer.from(`<?xml version="1.0"?><rss><channel><title>Test Feed</title></channel></rss>`),
+            headers: new Headers({ 'content-type': 'application/xml; charset=iso-8859-1' })
+        }) as unknown as typeof fetch;
+
+        const result = await registerFeed('https://example.com/test1');
+        expect(result.success).toBe(true);
+    });
+
+    it('should handle missing content-type header without match', async () => {
+        const { registerFeed } = await import('./rss');
+
+        global.fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            arrayBuffer: async () => Buffer.from(`<?xml version="1.0"?><rss><channel><title>Test Feed</title></channel></rss>`),
+            headers: { get: () => null }
+        }) as unknown as typeof fetch;
+
+        const result = await registerFeed('https://example.com/test2');
+        expect(result.success).toBe(true);
+    });
+
+    it('should handle unsupported charset gracefully', async () => {
+        const { registerFeed } = await import('./rss');
+
+        global.fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            arrayBuffer: async () => Buffer.from(`<?xml version="1.0"?><rss><channel><title>Test Feed</title></channel></rss>`),
+            headers: new Headers({ 'content-type': 'application/xml; charset=unsupported-charset' })
+        }) as unknown as typeof fetch;
+
+        const result = await registerFeed('https://example.com/test3');
+        expect(result.success).toBe(true);
+    });
+
     it('should fallback to charset parsing from xml head', async () => {
         const { registerFeed } = await import('./rss');
 
