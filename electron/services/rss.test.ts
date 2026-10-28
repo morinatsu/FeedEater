@@ -130,7 +130,7 @@ describe('rss service', () => {
 
     it('should skip counting if syncFeed fails or imports nothing', async () => {
         const { getFeeds } = await import('../db/repository');
-        // @ts-expect-error
+        // @ts-expect-error - mocking imported function
         getFeeds.mockReturnValue([
             { id: 1, url: 'http://example.com/fail' },
             { id: 2, url: 'http://example.com/empty' }
@@ -150,7 +150,7 @@ describe('rss service', () => {
 
         const Parser = (await import('rss-parser')).default;
         const parserInstance = new Parser();
-        // @ts-expect-error
+        // @ts-expect-error - mocking parseString method
         parserInstance.parseString.mockResolvedValueOnce({
             items: [] // No items for empty feed
         });
@@ -281,7 +281,7 @@ describe('rss service', () => {
 
             const Parser = (await import('rss-parser')).default;
             const parserInstance = new Parser();
-            // @ts-expect-error
+            // @ts-expect-error - mocking parseString method
             parserInstance.parseString.mockResolvedValueOnce({
                 title: 'Mock Feed',
                 items: [
@@ -317,7 +317,7 @@ describe('RSS Service Additional coverage', () => {
     it('should use fallback title for feed if title is missing', async () => {
         const { registerFeed } = await import('./rss');
         const { addFeed } = await import('../db/repository');
-        // @ts-expect-error
+        // @ts-expect-error - mocking addFeed
         addFeed.mockReturnValue({ id: 99, title: 'Untitled Feed', url: 'https://example.com/feed' });
 
         global.fetch = vi.fn().mockResolvedValue({
@@ -328,7 +328,7 @@ describe('RSS Service Additional coverage', () => {
 
         const Parser = (await import('rss-parser')).default;
         const parserInstance = new Parser();
-        // @ts-expect-error
+        // @ts-expect-error - mocking parseString method
         parserInstance.parseString.mockResolvedValueOnce({
             items: [] // No title
         });
